@@ -68,10 +68,12 @@ jobs:
           $bin = "target/${{ matrix.target }}/release/comet.exe"
           Copy-Item $bin "dist/comet-windows-x86_64.exe"
           Compress-Archive -Path $bin -DestinationPath "dist/comet-${{ matrix.target }}.zip" -Force
-          Get-ChildItem dist | ForEach-Object {
-            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
-            "$hash  $($_.Name)"
-          } | Out-File -FilePath "dist/SHA256SUMS-${{ matrix.target }}.txt" -Encoding ascii
+          $files = Get-ChildItem dist -File | Where-Object { $_.Extension -in ".exe", ".zip" }
+          $sums = foreach ($f in $files) {
+            $hash = (Get-FileHash $f.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($f.Name)"
+          }
+          $sums | Out-File -FilePath "dist/SHA256SUMS-${{ matrix.target }}.txt" -Encoding ascii
 
       - name: Package Linux static artifact
         if: matrix.archive == 'tar.gz'
