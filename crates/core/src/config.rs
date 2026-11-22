@@ -24,10 +24,10 @@ impl Default for CliConfig {
 
 impl CliConfig {
     pub fn path() -> Result<PathBuf> {
-        let dir = dirs::config_dir()
-            .ok_or_else(|| CometError::Config("could not locate config directory".to_string()))?
-            .join("comet");
-        Ok(dir.join("config.json"))
+        let dir = dirs::home_dir()
+            .ok_or_else(|| CometError::Config("could not locate home directory".to_string()))?
+            .join(".comet");
+        Ok(dir.join("config.toml"))
     }
 
     pub fn load() -> Result<Self> {
@@ -36,7 +36,7 @@ impl CliConfig {
             return Ok(Self::default());
         }
         let raw = fs::read_to_string(&path)?;
-        let cfg = serde_json::from_str(&raw)?;
+        let cfg = toml::from_str(&raw).map_err(|e| CometError::Config(e.to_string()))?;
         Ok(cfg)
     }
 
@@ -45,7 +45,7 @@ impl CliConfig {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
-        let raw = serde_json::to_string_pretty(self)?;
+        let raw = toml::to_string_pretty(self).map_err(|e| CometError::Config(e.to_string()))?;
         fs::write(&path, raw)?;
         Ok(())
     }
