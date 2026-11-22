@@ -7,19 +7,9 @@ use crate::error::{CometError, Result};
 
 const DEFAULT_API_URL: &str = "https://comet.fraio.cc";
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CliConfig {
-    pub api_url: String,
     pub token: Option<String>,
-}
-
-impl Default for CliConfig {
-    fn default() -> Self {
-        Self {
-            api_url: DEFAULT_API_URL.to_string(),
-            token: None,
-        }
-    }
 }
 
 impl CliConfig {
@@ -68,6 +58,6 @@ impl CliConfig {
         {
             return env_url.trim_end_matches('/').to_string();
         }
-        self.api_url.trim_end_matches('/').to_string()
+        DEFAULT_API_URL.to_string()
     }
 }

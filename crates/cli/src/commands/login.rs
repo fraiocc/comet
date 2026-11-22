@@ -1,21 +1,14 @@
 use anyhow::Result;
 use comet_core::{CliConfig, CometClient};
-use dialoguer::{Input, Password};
+use dialoguer::Password;
 
 use crate::cli::LoginArgs;
 use crate::ui;
 
 pub async fn run(args: LoginArgs) -> Result<()> {
     let mut config = CliConfig::load()?;
+    let api_url = config.resolve_api_url();
     let theme = ui::theme();
-
-    let api_url = match args.api_url {
-        Some(url) => url,
-        None => Input::with_theme(&theme)
-            .with_prompt("Comet API URL")
-            .default(config.api_url.clone())
-            .interact_text()?,
-    };
 
     let token = match args.token {
         Some(t) => t,
@@ -23,7 +16,7 @@ pub async fn run(args: LoginArgs) -> Result<()> {
             println!(
                 "  {} Generate a CLI token at {}",
                 ui::muted("→"),
-                ui::sky(&format!("{}/dashboard", api_url.trim_end_matches('/')))
+                ui::sky(&format!("{api_url}/dashboard"))
             );
             Password::with_theme(&theme)
                 .with_prompt("CLI Token")
@@ -37,7 +30,6 @@ pub async fn run(args: LoginArgs) -> Result<()> {
     let user = client.whoami().await?;
     pb.finish_and_clear();
 
-    config.api_url = api_url;
     config.token = Some(token);
     config.save()?;
 

@@ -27,9 +27,6 @@ pub enum Command {
 
 #[derive(Debug, Args, Default)]
 pub struct LoginArgs {
-    /// Comet web API URL
-    #[arg(long)]
-    pub api_url: Option<String>,
     /// Personal CLI token generated in the Comet web dashboard
     #[arg(long)]
     pub token: Option<String>,
