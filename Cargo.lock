@@ -195,7 +195,7 @@ checksum = "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
 
 [[package]]
 name = "comet-cli"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -212,7 +212,7 @@ dependencies = [
 
 [[package]]
 name = "comet-core"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "async-trait",
  "dirs",
