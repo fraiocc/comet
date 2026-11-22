@@ -46,7 +46,9 @@
     "platform3Desc": "Paper, Velocity, and Waterfall releases with channel selection, dependency sync, and JWT authentication.",
     "ctaBannerTitle": "Ready to stop uploading releases by hand?",
     "ctaBannerSubtitle": "Connect your GitHub repository in under a minute and ship your next build with comet.",
-    "footerNote": "Built with Rust & Next.js"
+    "footerNote": "Free & open source under AGPL-3.0",
+    "footerDesc": "Free and open-source release publishing for GitHub Releases, Modrinth, Hangar, and CurseForge.",
+    "footerGithub": "fraiocc/comet"
   },
   "auth": {
     "loginTitle": "Welcome back",

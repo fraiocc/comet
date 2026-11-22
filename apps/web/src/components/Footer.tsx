@@ -4,7 +4,11 @@ import { getTranslations } from "next-intl/server";
 import { GalaxyFooterShader } from "@/components/GalaxyFooterShader";
 import { StarWordmark } from "@/components/StarWordmark";
 import { CometLogo } from "@/components/ui/CometLogo";
+import { GitHubIcon } from "@/components/ui/Icons";
 import { APP_VERSION } from "@/lib/version";
+
+const GITHUB_REPO_URL =
+  process.env.NEXT_PUBLIC_GITHUB_REPO_URL ?? "https://github.com/fraiocc/comet";
 
 export async function Footer() {
   const t = await getTranslations();
@@ -21,9 +25,20 @@ export async function Footer() {
                   {t("app.name")}
                 </span>
               </Link>
-              <p className="max-w-xs text-sm leading-relaxed text-[#b4b5cb]">
-                {t("app.tagline")}
+              <p className="max-w-sm text-sm leading-relaxed text-[#b4b5cb]">
+                {t("home.footerDesc")}
               </p>
+              <div className="pt-1">
+                <a
+                  href={GITHUB_REPO_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full bg-white/[0.06] px-3.5 py-1.5 text-xs font-medium text-white ring-1 ring-inset ring-white/[0.1] transition-colors hover:bg-white/[0.12]"
+                >
+                  <GitHubIcon className="h-3.5 w-3.5" />
+                  <span className="font-mono">{t("home.footerGithub")}</span>
+                </a>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-8 sm:col-span-6 sm:justify-self-end">
