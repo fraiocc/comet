@@ -39,6 +39,7 @@ export const projects = pgTable("projects", {
   displayName: text("display_name").notNull(),
   assetPattern: text("asset_pattern").notNull().default("*.jar"),
   defaultChangelog: text("default_changelog"),
+  discordWebhookUrl: text("discord_webhook_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -66,4 +67,24 @@ export const targets = pgTable("targets", {
   descriptionOverride: text("description_override"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export interface PublishResultItem {
+  kind: string;
+  externalProjectId: string;
+  status: "success" | "failed";
+  url?: string | null;
+  error?: string | null;
+}
+
+export const publishHistory = pgTable("publish_history", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  releaseTag: text("release_tag").notNull(),
+  assetName: text("asset_name").notNull(),
+  source: text("source").notNull().default("cli"),
+  results: jsonb("results").$type<PublishResultItem[]>().notNull().default([]),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });

@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { projects, targets, type TargetDependency } from "@/db/schema";
 import { getSessionUser } from "@/lib/auth";
 import { encryptSecret } from "@/lib/crypto";
+import { isValidDiscordWebhookUrl } from "@/lib/discord";
 
 export async function PATCH(
   req: NextRequest,
@@ -20,7 +21,16 @@ export async function PATCH(
     assetPattern?: string;
     defaultChangelog?: string | null;
     displayName?: string;
+    discordWebhookUrl?: string | null;
   };
+
+  const webhook = body.discordWebhookUrl?.trim() || null;
+  if (webhook && !isValidDiscordWebhookUrl(webhook)) {
+    return NextResponse.json(
+      { error: "Enter a valid Discord webhook URL (https://discord.com/api/webhooks/...)" },
+      { status: 400 },
+    );
+  }
 
   const [updated] = await db
     .update(projects)
@@ -28,6 +38,7 @@ export async function PATCH(
       assetPattern: body.assetPattern?.trim() || "*.jar",
       defaultChangelog: body.defaultChangelog ?? null,
       displayName: body.displayName?.trim(),
+      discordWebhookUrl: webhook,
       updatedAt: new Date(),
     })
     .where(and(eq(projects.id, id), eq(projects.userId, user.id)))

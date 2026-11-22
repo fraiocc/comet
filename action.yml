@@ -1,5 +1,8 @@
 name: "Comet Publish"
 description: "Publish a GitHub Release to configured targets (Modrinth, Hangar, etc.) using Comet"
+branding:
+  icon: "upload-cloud"
+  color: "blue"
 inputs:
   comet-token:
     description: "Comet API token generated from the Comet web dashboard"

@@ -1,8 +1,8 @@
 use anyhow::{Context, Result, bail};
 use comet_core::github::{format_bytes, match_asset, normalize_version};
 use comet_core::{
-    CliConfig, CometClient, GitHubClient, ProjectConfig, PublishRequest, PublisherRegistry,
-    TargetConfig, TargetKind, VersionType,
+    CliConfig, CometClient, GitHubClient, ProjectConfig, PublishRequest, PublishResultItem,
+    PublisherRegistry, RecordHistoryRequest, TargetConfig, TargetKind, VersionType,
 };
 use dialoguer::{Confirm, Input, MultiSelect, Select};
 
@@ -207,6 +207,7 @@ pub async fn run(args: PublishArgs) -> Result<()> {
     let total = selected_targets.len();
     let mut succeeded = 0usize;
     let mut failed = 0usize;
+    let mut history_results: Vec<PublishResultItem> = Vec::with_capacity(total);
 
     for (idx, target) in selected_targets.into_iter().enumerate() {
         let publisher = registry.get(target.kind)?;
@@ -236,6 +237,13 @@ pub async fn run(args: PublishArgs) -> Result<()> {
             Ok(result) => {
                 pb.finish_and_clear();
                 succeeded += 1;
+                history_results.push(PublishResultItem {
+                    kind: target.kind.to_string(),
+                    external_project_id: target.external_project_id.clone(),
+                    status: "success".to_string(),
+                    url: result.url.clone(),
+                    error: None,
+                });
                 let detail = match result.url {
                     Some(url) => format!("{version_number}  →  {url}"),
                     None => format!("Version {} uploaded", result.version_id),
@@ -248,6 +256,7 @@ pub async fn run(args: PublishArgs) -> Result<()> {
                 ui::print_substep_err(&err_msg);
 
                 let mut recovered = false;
+                let mut final_err = err_msg.clone();
                 if !args.yes
                     && target.kind == TargetKind::Hangar
                     && !target.dependencies.is_empty()
@@ -267,6 +276,13 @@ pub async fn run(args: PublishArgs) -> Result<()> {
                                 pb.finish_and_clear();
                                 succeeded += 1;
                                 recovered = true;
+                                history_results.push(PublishResultItem {
+                                    kind: target.kind.to_string(),
+                                    external_project_id: target.external_project_id.clone(),
+                                    status: "success".to_string(),
+                                    url: result.url.clone(),
+                                    error: None,
+                                });
                                 let detail = match result.url {
                                     Some(url) => format!("{version_number}  →  {url}"),
                                     None => format!("Version {} uploaded", result.version_id),
@@ -275,7 +291,8 @@ pub async fn run(args: PublishArgs) -> Result<()> {
                             }
                             Err(retry_err) => {
                                 pb.finish_and_clear();
-                                ui::print_substep_err(&retry_err.to_string());
+                                final_err = retry_err.to_string();
+                                ui::print_substep_err(&final_err);
                             }
                         }
                     }
@@ -283,7 +300,28 @@ pub async fn run(args: PublishArgs) -> Result<()> {
 
                 if !recovered {
                     failed += 1;
+                    history_results.push(PublishResultItem {
+                        kind: target.kind.to_string(),
+                        external_project_id: target.external_project_id.clone(),
+                        status: "failed".to_string(),
+                        url: None,
+                        error: Some(final_err),
+                    });
                     if args.yes {
+                        let source = if std::env::var("CI").is_ok() {
+                            "ci"
+                        } else {
+                            "cli"
+                        };
+                        let _ = client
+                            .record_history(&RecordHistoryRequest {
+                                project_id: project.id.clone(),
+                                release_tag: release.tag_name.clone(),
+                                asset_name: asset.name.clone(),
+                                source: source.to_string(),
+                                results: history_results,
+                            })
+                            .await;
                         return Err(err.into());
                     }
                     let remaining = total.saturating_sub(idx + 1);
@@ -300,6 +338,27 @@ pub async fn run(args: PublishArgs) -> Result<()> {
                     }
                 }
             }
+        }
+    }
+
+    if !history_results.is_empty() {
+        let source = if std::env::var("CI").is_ok() {
+            "ci"
+        } else {
+            "cli"
+        };
+        if let Ok(discord_sent) = client
+            .record_history(&RecordHistoryRequest {
+                project_id: project.id.clone(),
+                release_tag: release.tag_name.clone(),
+                asset_name: asset.name.clone(),
+                source: source.to_string(),
+                results: history_results,
+            })
+            .await
+            && discord_sent
+        {
+            ui::print_ok("Discord webhook notification sent.");
         }
     }
 

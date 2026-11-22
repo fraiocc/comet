@@ -10,7 +10,9 @@ import { TargetEditModal } from "@/components/TargetEditModal";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { CopyField } from "@/components/ui/CopyField";
 import { FieldLabel, Input, Textarea } from "@/components/ui/Field";
+import { FormAlert } from "@/components/ui/FieldError";
 import {
+  CheckIcon,
   ExternalLinkIcon,
   GitHubIcon,
   LayersIcon,
@@ -21,7 +23,7 @@ import {
 } from "@/components/ui/Icons";
 import { Modal } from "@/components/ui/Modal";
 import { Surface } from "@/components/ui/Surface";
-import type { TargetDependency } from "@/db/schema";
+import type { PublishResultItem, TargetDependency } from "@/db/schema";
 import type { GitHubReleaseSummary } from "@/lib/github";
 
 export interface TargetSummary {
@@ -36,6 +38,15 @@ export interface TargetSummary {
   descriptionOverride: string | null;
 }
 
+export interface PublishHistoryItem {
+  id: string;
+  releaseTag: string;
+  assetName: string;
+  source: string;
+  results: PublishResultItem[];
+  createdAt: string;
+}
+
 interface ProjectDetailClientProps {
   project: {
     id: string;
@@ -43,11 +54,27 @@ interface ProjectDetailClientProps {
     displayName: string;
     assetPattern: string;
     defaultChangelog: string | null;
+    discordWebhookUrl: string | null;
   };
   initialTargets: TargetSummary[];
+  initialHistory: PublishHistoryItem[];
 }
 
-type ProjectTab = "targets" | "releases" | "settings";
+type ProjectTab = "targets" | "releases" | "history" | "settings";
+
+function formatDateTime(iso: string): string {
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -58,6 +85,7 @@ function formatBytes(bytes: number): string {
 export function ProjectDetailClient({
   project,
   initialTargets,
+  initialHistory,
 }: ProjectDetailClientProps) {
   const t = useTranslations("project");
   const router = useRouter();
@@ -66,6 +94,8 @@ export function ProjectDetailClient({
   const [displayName, setDisplayName] = useState(project.displayName);
   const [assetPattern, setAssetPattern] = useState(project.assetPattern);
   const [defaultChangelog, setDefaultChangelog] = useState(project.defaultChangelog ?? "");
+  const [discordWebhookUrl, setDiscordWebhookUrl] = useState(project.discordWebhookUrl ?? "");
+  const [testingWebhook, setTestingWebhook] = useState(false);
 
   const [targetList, setTargetList] = useState<TargetSummary[]>(initialTargets);
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -117,15 +147,38 @@ export function ProjectDetailClient({
           displayName: displayName.trim() || project.displayName,
           assetPattern,
           defaultChangelog: defaultChangelog || null,
+          discordWebhookUrl: discordWebhookUrl.trim() || null,
         }),
       });
+      const data = (await resp.json().catch(() => ({}))) as { error?: string };
       if (resp.ok) {
         setStatusMessage(t("saved"));
       } else {
-        setErrorMessage("Failed to save settings");
+        setErrorMessage(data.error ?? "Failed to save settings");
       }
     } finally {
       setSavingSettings(false);
+    }
+  }
+
+  async function handleTestWebhook() {
+    setStatusMessage(null);
+    setErrorMessage(null);
+    setTestingWebhook(true);
+    try {
+      const resp = await fetch(`/api/projects/${project.id}/webhook-test`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ webhookUrl: discordWebhookUrl.trim() }),
+      });
+      const data = (await resp.json().catch(() => ({}))) as { error?: string };
+      if (!resp.ok) {
+        setErrorMessage(data.error ?? "Webhook test failed");
+        return;
+      }
+      setStatusMessage(t("webhookTestSent"));
+    } finally {
+      setTestingWebhook(false);
     }
   }
 
@@ -249,6 +302,7 @@ export function ProjectDetailClient({
             [
               { id: "targets", label: t("tabTargets"), count: targetList.length },
               { id: "releases", label: t("tabReleases"), count: releases.length },
+              { id: "history", label: t("tabHistory"), count: initialHistory.length },
               { id: "settings", label: t("tabSettings"), count: null },
             ] as const
           ).map((tab) => {
@@ -283,17 +337,8 @@ export function ProjectDetailClient({
         </div>
       </div>
 
-      {statusMessage && (
-        <div className="rounded-xl bg-[var(--success-bg)] px-4 py-3 text-sm text-[var(--success)]">
-          {statusMessage}
-        </div>
-      )}
-
-      {errorMessage && (
-        <div className="rounded-xl bg-[var(--danger-bg)] px-4 py-3 text-sm text-[var(--danger)]">
-          {errorMessage}
-        </div>
-      )}
+      <FormAlert message={statusMessage} variant="success" />
+      <FormAlert message={errorMessage} variant="error" />
 
       {activeTab === "targets" && (
         <section className="animate-fade-up space-y-5">
@@ -501,6 +546,83 @@ export function ProjectDetailClient({
         </section>
       )}
 
+      {activeTab === "history" && (
+        <section className="animate-fade-up space-y-3">
+          {initialHistory.length === 0 ? (
+            <Surface className="flex flex-col items-center justify-center rounded-[24px] px-8 py-16 text-center">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--accent-soft)] text-[var(--accent)]">
+                <TerminalIcon className="h-5 w-5" />
+              </span>
+              <h2 className="mt-5 text-lg font-semibold text-white">{t("historyTitle")}</h2>
+              <p className="mt-2 max-w-md text-sm leading-relaxed text-[var(--muted)]">
+                {t("noHistory")}
+              </p>
+            </Surface>
+          ) : (
+            <div className="space-y-2 rounded-[24px] bg-[var(--surface)] p-3 ring-1 ring-inset ring-white/[0.05]">
+              {initialHistory.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex flex-col justify-between gap-4 rounded-2xl bg-[var(--bg)]/55 px-5 py-4 sm:flex-row sm:items-center"
+                >
+                  <div className="min-w-0 flex-1 space-y-2.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-sm font-semibold text-white">
+                        {item.releaseTag}
+                      </span>
+                      <span className="rounded-full bg-[#1a6dff]/15 px-2.5 py-0.5 text-xs font-medium text-[#9cc4ff]">
+                        {item.source === "ci" ? t("sourceCi") : t("sourceCli")}
+                      </span>
+                      <span className="font-mono text-xs text-[var(--muted)]">
+                        {item.assetName}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {item.results.map((res, idx) =>
+                        res.status === "success" && res.url ? (
+                          <a
+                            key={`${item.id}-${res.kind}-${idx}`}
+                            href={res.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--success-bg)] px-2.5 py-1 text-xs font-medium capitalize text-[var(--success)] transition-opacity hover:opacity-85"
+                          >
+                            <CheckIcon className="h-3 w-3" />
+                            <span>{res.kind}</span>
+                            <ExternalLinkIcon className="h-3 w-3 opacity-75" />
+                          </a>
+                        ) : res.status === "success" ? (
+                          <span
+                            key={`${item.id}-${res.kind}-${idx}`}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--success-bg)] px-2.5 py-1 text-xs font-medium capitalize text-[var(--success)]"
+                          >
+                            <CheckIcon className="h-3 w-3" />
+                            <span>{res.kind}</span>
+                          </span>
+                        ) : (
+                          <span
+                            key={`${item.id}-${res.kind}-${idx}`}
+                            title={res.error ?? undefined}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500/10 px-2.5 py-1 text-xs font-medium capitalize text-[#fda4af]"
+                          >
+                            <span>{res.kind}</span>
+                          </span>
+                        ),
+                      )}
+                    </div>
+                  </div>
+
+                  <span className="shrink-0 font-mono text-xs text-[var(--subtle)]">
+                    {formatDateTime(item.createdAt)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
       {activeTab === "settings" && (
         <section className="animate-fade-up grid gap-6 lg:grid-cols-12">
           <Surface className="rounded-[24px] p-7 lg:col-span-7">
@@ -539,6 +661,33 @@ export function ProjectDetailClient({
                   placeholder={t("defaultChangelogPlaceholder")}
                   onChange={(e) => setDefaultChangelog(e.target.value)}
                 />
+              </div>
+
+              <div className="border-t border-white/[0.06] pt-5">
+                <FieldLabel htmlFor="discordWebhookUrl">{t("discordWebhookLabel")}</FieldLabel>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <Input
+                    id="discordWebhookUrl"
+                    type="url"
+                    value={discordWebhookUrl}
+                    placeholder={t("discordWebhookPlaceholder")}
+                    onChange={(e) => setDiscordWebhookUrl(e.target.value)}
+                    className="font-mono text-sm"
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="md"
+                    disabled={testingWebhook || !discordWebhookUrl.trim()}
+                    onClick={handleTestWebhook}
+                    className="shrink-0"
+                  >
+                    {testingWebhook ? t("testingWebhook") : t("testWebhook")}
+                  </Button>
+                </div>
+                <p className="mt-2 text-xs leading-relaxed text-[var(--subtle)]">
+                  {t("discordWebhookHint")}
+                </p>
               </div>
 
               <Button type="submit" size="md" disabled={savingSettings}>

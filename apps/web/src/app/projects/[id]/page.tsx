@@ -1,10 +1,10 @@
 import { notFound, redirect } from "next/navigation";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 
 import { Navbar } from "@/components/Navbar";
 import { ProjectDetailClient } from "@/components/ProjectDetailClient";
 import { db } from "@/db";
-import { projects, targets } from "@/db/schema";
+import { projects, publishHistory, targets } from "@/db/schema";
 import { getSessionUser } from "@/lib/auth";
 
 export default async function ProjectDetailPage({
@@ -43,11 +43,34 @@ export default async function ProjectDetailPage({
     .from(targets)
     .where(eq(targets.projectId, project.id));
 
+  const historyRows = await db
+    .select({
+      id: publishHistory.id,
+      releaseTag: publishHistory.releaseTag,
+      assetName: publishHistory.assetName,
+      source: publishHistory.source,
+      results: publishHistory.results,
+      createdAt: publishHistory.createdAt,
+    })
+    .from(publishHistory)
+    .where(eq(publishHistory.projectId, project.id))
+    .orderBy(desc(publishHistory.createdAt))
+    .limit(30);
+
+  const initialHistory = historyRows.map((row) => ({
+    ...row,
+    createdAt: row.createdAt.toISOString(),
+  }));
+
   return (
     <div className="min-h-screen">
       <Navbar username={user.username} />
       <main className="mx-auto max-w-6xl px-6 py-12 sm:px-8">
-        <ProjectDetailClient project={project} initialTargets={projectTargets} />
+        <ProjectDetailClient
+          project={project}
+          initialTargets={projectTargets}
+          initialHistory={initialHistory}
+        />
       </main>
     </div>
   );

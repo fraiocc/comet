@@ -2,7 +2,15 @@ use reqwest::header::{AUTHORIZATION, USER_AGENT};
 use serde::Deserialize;
 
 use crate::error::{CometError, Result};
-use crate::models::ProjectConfig;
+use crate::models::{ProjectConfig, RecordHistoryRequest};
+
+const CLI_USER_AGENT: &str = concat!("comet-cli/", env!("CARGO_PKG_VERSION"));
+
+#[derive(Debug, Deserialize)]
+struct RecordHistoryResponse {
+    #[serde(default, rename = "discordSent")]
+    discord_sent: bool,
+}
 
 pub struct CometClient {
     http: reqwest::Client,
@@ -38,7 +46,7 @@ impl CometClient {
         let resp = self
             .http
             .get(&url)
-            .header(USER_AGENT, "comet-cli/0.1.0")
+            .header(USER_AGENT, CLI_USER_AGENT)
             .header(AUTHORIZATION, format!("Bearer {}", self.token))
             .send()
             .await?;
@@ -62,7 +70,7 @@ impl CometClient {
         let resp = self
             .http
             .get(&url)
-            .header(USER_AGENT, "comet-cli/0.1.0")
+            .header(USER_AGENT, CLI_USER_AGENT)
             .header(AUTHORIZATION, format!("Bearer {}", self.token))
             .send()
             .await?;
@@ -91,7 +99,7 @@ impl CometClient {
         let resp = self
             .http
             .patch(&url)
-            .header(USER_AGENT, "comet-cli/0.1.0")
+            .header(USER_AGENT, CLI_USER_AGENT)
             .header(AUTHORIZATION, format!("Bearer {}", self.token))
             .json(&serde_json::json!({ "enabled": enabled }))
             .send()
@@ -109,5 +117,37 @@ impl CometClient {
             });
         }
         Ok(())
+    }
+
+    pub async fn record_history(&self, req: &RecordHistoryRequest) -> Result<bool> {
+        let url = format!("{}/api/cli/history", self.base_url);
+        let resp = self
+            .http
+            .post(&url)
+            .header(USER_AGENT, CLI_USER_AGENT)
+            .header(AUTHORIZATION, format!("Bearer {}", self.token))
+            .json(req)
+            .send()
+            .await?;
+
+        let status = resp.status();
+        if status.as_u16() == 401 {
+            return Err(CometError::Unauthenticated);
+        }
+        if !status.is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            return Err(CometError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
+        }
+
+        let payload = resp
+            .json::<RecordHistoryResponse>()
+            .await
+            .unwrap_or(RecordHistoryResponse {
+                discord_sent: false,
+            });
+        Ok(payload.discord_sent)
     }
 }

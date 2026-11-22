@@ -110,3 +110,23 @@ pub struct PublishResult {
     pub version_id: String,
     pub url: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PublishResultItem {
+    pub kind: String,
+    pub external_project_id: String,
+    pub status: String,
+    pub url: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordHistoryRequest {
+    pub project_id: String,
+    pub release_tag: String,
+    pub asset_name: String,
+    pub source: String,
+    pub results: Vec<PublishResultItem>,
+}

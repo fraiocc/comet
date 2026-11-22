@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { GalaxyFooterShader } from "@/components/GalaxyFooterShader";
 import { StarWordmark } from "@/components/StarWordmark";
 import { CometLogo } from "@/components/ui/CometLogo";
+import { APP_VERSION } from "@/lib/version";
 
 export async function Footer() {
   const t = await getTranslations();
@@ -67,7 +68,7 @@ export async function Footer() {
 
           <div className="mt-14 flex flex-wrap items-center justify-between gap-4 border-t border-white/[0.08] pt-6 text-xs text-white/55">
             <span>{t("home.footerNote")}</span>
-            <span className="font-mono">comet-cli · v0.1.0</span>
+            <span className="font-mono">comet-cli · v{APP_VERSION}</span>
           </div>
 
           <StarWordmark text="comet" />
