@@ -14,6 +14,7 @@ import {
   TargetConfigPanel,
   TargetStatusSwitch,
   type MinecraftMeta,
+  type TargetKindOption,
 } from "@/components/target/TargetFormParts";
 import type { TargetSummary } from "@/components/ProjectDetailClient";
 import type { ProviderProjectOption } from "@/app/api/providers/projects/route";
@@ -35,7 +36,7 @@ export function TargetCreateModal({
   const t = useTranslations("project");
 
   const [meta, setMeta] = useState<MinecraftMeta | null>(null);
-  const [kind, setKind] = useState<"modrinth" | "hangar">("modrinth");
+  const [kind, setKind] = useState<TargetKindOption>("modrinth");
   const [enabled, setEnabled] = useState(true);
   const [loaderGroup, setLoaderGroup] = useState<"plugins" | "mods">("plugins");
 
@@ -84,7 +85,7 @@ export function TargetCreateModal({
   }, [open, meta]);
 
   useEffect(() => {
-    if (!open || manualIdMode) return;
+    if (!open || manualIdMode || kind === "curseforge") return;
     const trimmed = token.trim();
     if (trimmed.length < 8) return;
 
@@ -125,7 +126,7 @@ export function TargetCreateModal({
     };
   }, [open, manualIdMode, kind, token]);
 
-  function handleKindChange(nextKind: "modrinth" | "hangar") {
+  function handleKindChange(nextKind: TargetKindOption) {
     if (nextKind === kind) return;
     setKind(nextKind);
     setProviderProjects([]);
@@ -283,7 +284,7 @@ export function TargetCreateModal({
     }
   }
 
-  const readyToConfigure = Boolean(externalProjectId.trim()) || manualIdMode;
+  const readyToConfigure = Boolean(externalProjectId.trim()) || manualIdMode || kind === "curseforge";
 
   return (
     <Modal
@@ -298,22 +299,28 @@ export function TargetCreateModal({
 
         <div className="grid gap-6 lg:grid-cols-12">
           <div className="space-y-5 rounded-2xl bg-[var(--bg)]/55 p-5 lg:col-span-5">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+            <div className="space-y-4">
               <div>
                 <FieldLabel>{t("targetKind")}</FieldLabel>
-                <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-[var(--surface)] p-1">
-                  {(["modrinth", "hangar"] as const).map((option) => (
+                <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-[var(--surface)] p-1">
+                  {(
+                    [
+                      { id: "modrinth", label: "Modrinth" },
+                      { id: "hangar", label: "Hangar" },
+                      { id: "curseforge", label: "CurseForge" },
+                    ] as const
+                  ).map((option) => (
                     <button
-                      key={option}
+                      key={option.id}
                       type="button"
-                      onClick={() => handleKindChange(option)}
-                      className={`rounded-lg py-2 text-xs font-medium capitalize transition-colors cursor-pointer ${
-                        kind === option
+                      onClick={() => handleKindChange(option.id)}
+                      className={`rounded-lg py-2 text-xs font-medium transition-colors cursor-pointer ${
+                        kind === option.id
                           ? "bg-[#1a6dff] text-white"
                           : "text-[var(--muted)] hover:text-white"
                       }`}
                     >
-                      {option}
+                      {option.label}
                     </button>
                   ))}
                 </div>
@@ -334,23 +341,45 @@ export function TargetCreateModal({
                 autoComplete="off"
               />
               <p className="mt-2 text-xs leading-relaxed text-[var(--subtle)]">
-                {kind === "modrinth" ? t("modrinthScopesHint") : t("hangarScopesHint")}
+                {kind === "modrinth"
+                  ? t("modrinthScopesHint")
+                  : kind === "hangar"
+                    ? t("hangarScopesHint")
+                    : t("curseforgeScopesHint")}
               </p>
             </div>
 
-            <ProviderProjectList
-              providerAccount={providerAccount}
-              providerProjects={providerProjects}
-              projectSearch={projectSearch}
-              onProjectSearchChange={setProjectSearch}
-              loadingProvider={loadingProvider}
-              projectsLoaded={projectsLoaded}
-              manualIdMode={manualIdMode}
-              onToggleManualMode={() => setManualIdMode((v) => !v)}
-              externalProjectId={externalProjectId}
-              onExternalProjectIdChange={setExternalProjectId}
-              onSelectProject={handleSelectProject}
-            />
+            {kind === "curseforge" ? (
+              <div>
+                <FieldLabel htmlFor="curseforgeProjectId">{t("externalProjectId")}</FieldLabel>
+                <Input
+                  id="curseforgeProjectId"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder={t("curseforgeProjectIdPlaceholder")}
+                  value={externalProjectId}
+                  onChange={(e) => setExternalProjectId(e.target.value)}
+                  className="font-mono"
+                />
+                <p className="mt-2 text-xs leading-relaxed text-[var(--subtle)]">
+                  {t("curseforgeProjectIdHint")}
+                </p>
+              </div>
+            ) : (
+              <ProviderProjectList
+                providerAccount={providerAccount}
+                providerProjects={providerProjects}
+                projectSearch={projectSearch}
+                onProjectSearchChange={setProjectSearch}
+                loadingProvider={loadingProvider}
+                projectsLoaded={projectsLoaded}
+                manualIdMode={manualIdMode}
+                onToggleManualMode={() => setManualIdMode((v) => !v)}
+                externalProjectId={externalProjectId}
+                onExternalProjectIdChange={setExternalProjectId}
+                onSelectProject={handleSelectProject}
+              />
+            )}
           </div>
 
           <div className="lg:col-span-7">

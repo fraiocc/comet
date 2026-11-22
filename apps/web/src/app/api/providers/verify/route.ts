@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   const token = body.token?.trim();
   const externalProjectId = body.externalProjectId?.trim();
 
-  if (kind !== "modrinth" && kind !== "hangar") {
+  if (kind !== "modrinth" && kind !== "hangar" && kind !== "curseforge") {
     return NextResponse.json({ error: "Unsupported platform" }, { status: 400 });
   }
   if (!token || !externalProjectId) {
@@ -148,6 +148,36 @@ export async function POST(req: NextRequest) {
         ok: true,
         projectTitle: project.title,
         username: mrUser.username,
+      });
+    }
+
+    if (kind === "curseforge") {
+      if (!/^\d+$/.test(externalProjectId)) {
+        return NextResponse.json(
+          { error: "CurseForge project ID must be numeric (e.g. 238222)" },
+          { status: 400 },
+        );
+      }
+
+      const cfResp = await fetch("https://minecraft.curseforge.com/api/game/versions", {
+        headers: {
+          "X-Api-Token": token,
+          "User-Agent": "comet-web",
+        },
+        cache: "no-store",
+      });
+
+      if (!cfResp.ok) {
+        return NextResponse.json(
+          { error: "CurseForge API token is invalid or expired" },
+          { status: 401 },
+        );
+      }
+
+      return NextResponse.json({
+        ok: true,
+        projectTitle: `CurseForge #${externalProjectId}`,
+        username: "curseforge",
       });
     }
 

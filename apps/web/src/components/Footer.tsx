@@ -61,6 +61,7 @@ export async function Footer() {
                   <span>GitHub Releases</span>
                   <span>Modrinth</span>
                   <span>Hangar</span>
+                  <span>CurseForge</span>
                 </div>
               </div>
             </div>

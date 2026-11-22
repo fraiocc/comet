@@ -13,4 +13,6 @@ pub use models::{
     ProjectConfig, PublishRequest, PublishResult, PublishResultItem, RecordHistoryRequest,
     ReleaseAsset, ReleaseInfo, TargetConfig, TargetKind, VersionType,
 };
-pub use providers::{HangarPublisher, ModrinthPublisher, Publisher, PublisherRegistry};
+pub use providers::{
+    CurseForgePublisher, HangarPublisher, ModrinthPublisher, Publisher, PublisherRegistry,
+};

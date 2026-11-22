@@ -11,6 +11,8 @@ import { MultiSelectPicker } from "@/components/ui/MultiSelectPicker";
 import type { ProviderProjectOption } from "@/app/api/providers/projects/route";
 import type { TargetDependency } from "@/db/schema";
 
+export type TargetKindOption = "modrinth" | "hangar" | "curseforge";
+
 export interface MinecraftMeta {
   gameVersions: string[];
   loaders: {
@@ -246,7 +248,7 @@ export function ProviderProjectList({
 }
 
 interface TargetConfigPanelProps {
-  kind: "modrinth" | "hangar";
+  kind: TargetKindOption;
   meta: MinecraftMeta | null;
   loaderGroup: "plugins" | "mods";
   onLoaderGroupChange: (g: "plugins" | "mods") => void;
@@ -312,7 +314,7 @@ export function TargetConfigPanel({
           <div className="mb-2.5 flex items-center justify-between gap-3">
             <span className="text-sm font-medium text-[var(--muted)]">{t("loaders")}</span>
             <div className="flex items-center gap-2.5">
-              {kind === "modrinth" && (
+              {kind !== "hangar" && (
                 <div className="inline-flex rounded-lg bg-[var(--surface)] p-0.5">
                   <button
                     type="button"
@@ -413,15 +415,17 @@ export function TargetConfigPanel({
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-sm font-medium text-[var(--muted)]">{t("dependencies")}</span>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              disabled={copyingDeps || !canCopyDeps}
-              onClick={onCopyFromLatest}
-            >
-              {copyingDeps ? t("copyingDeps") : t("copyFromLatest")}
-            </Button>
+            {kind !== "curseforge" && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={copyingDeps || !canCopyDeps}
+                onClick={onCopyFromLatest}
+              >
+                {copyingDeps ? t("copyingDeps") : t("copyFromLatest")}
+              </Button>
+            )}
           </div>
 
           {depsNotice && <p className="text-xs text-[var(--accent)]">{depsNotice}</p>}
@@ -472,7 +476,7 @@ export function TargetConfigPanel({
                 options={[
                   { value: "required", label: t("depRequired") },
                   { value: "optional", label: t("depOptional") },
-                  ...(kind === "modrinth"
+                  ...(kind !== "hangar"
                     ? [
                         { value: "incompatible" as const, label: t("depIncompatible") },
                         { value: "embedded" as const, label: t("depEmbedded") },

@@ -12,6 +12,7 @@ import {
   TargetConfigPanel,
   TargetStatusSwitch,
   type MinecraftMeta,
+  type TargetKindOption,
 } from "@/components/target/TargetFormParts";
 import type { TargetSummary } from "@/components/ProjectDetailClient";
 import type { ProviderProjectOption } from "@/app/api/providers/projects/route";
@@ -33,7 +34,12 @@ export function TargetEditModal({
   onUpdated,
 }: TargetEditModalProps) {
   const t = useTranslations("project");
-  const kind: "modrinth" | "hangar" = target.kind === "hangar" ? "hangar" : "modrinth";
+  const kind: TargetKindOption =
+    target.kind === "hangar"
+      ? "hangar"
+      : target.kind === "curseforge"
+        ? "curseforge"
+        : "modrinth";
 
   const [meta, setMeta] = useState<MinecraftMeta | null>(null);
   const [enabled, setEnabled] = useState(target.enabled);
@@ -83,7 +89,7 @@ export function TargetEditModal({
   }, [open, meta]);
 
   useEffect(() => {
-    if (!open || manualIdMode) return;
+    if (!open || manualIdMode || kind === "curseforge") return;
     const trimmed = token.trim();
     const useSavedToken = trimmed.length === 0;
     if (!useSavedToken && trimmed.length < 8) return;
@@ -310,23 +316,45 @@ export function TargetEditModal({
                 autoComplete="off"
               />
               <p className="mt-2 text-xs leading-relaxed text-[var(--subtle)]">
-                {kind === "modrinth" ? t("modrinthScopesHint") : t("hangarScopesHint")}
+                {kind === "modrinth"
+                  ? t("modrinthScopesHint")
+                  : kind === "hangar"
+                    ? t("hangarScopesHint")
+                    : t("curseforgeScopesHint")}
               </p>
             </div>
 
-            <ProviderProjectList
-              providerAccount={providerAccount}
-              providerProjects={providerProjects}
-              projectSearch={projectSearch}
-              onProjectSearchChange={setProjectSearch}
-              loadingProvider={loadingProvider}
-              projectsLoaded={projectsLoaded}
-              manualIdMode={manualIdMode}
-              onToggleManualMode={() => setManualIdMode((v) => !v)}
-              externalProjectId={externalProjectId}
-              onExternalProjectIdChange={setExternalProjectId}
-              onSelectProject={handleSelectProject}
-            />
+            {kind === "curseforge" ? (
+              <div>
+                <FieldLabel htmlFor="editCurseforgeProjectId">{t("externalProjectId")}</FieldLabel>
+                <Input
+                  id="editCurseforgeProjectId"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder={t("curseforgeProjectIdPlaceholder")}
+                  value={externalProjectId}
+                  onChange={(e) => setExternalProjectId(e.target.value)}
+                  className="font-mono"
+                />
+                <p className="mt-2 text-xs leading-relaxed text-[var(--subtle)]">
+                  {t("curseforgeProjectIdHint")}
+                </p>
+              </div>
+            ) : (
+              <ProviderProjectList
+                providerAccount={providerAccount}
+                providerProjects={providerProjects}
+                projectSearch={projectSearch}
+                onProjectSearchChange={setProjectSearch}
+                loadingProvider={loadingProvider}
+                projectsLoaded={projectsLoaded}
+                manualIdMode={manualIdMode}
+                onToggleManualMode={() => setManualIdMode((v) => !v)}
+                externalProjectId={externalProjectId}
+                onExternalProjectIdChange={setExternalProjectId}
+                onSelectProject={handleSelectProject}
+              />
+            )}
           </div>
 
           <div className="lg:col-span-7">

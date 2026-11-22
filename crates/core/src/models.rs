@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 pub enum TargetKind {
     Modrinth,
     Hangar,
+    #[serde(rename = "curseforge")]
+    CurseForge,
 }
 
 impl std::fmt::Display for TargetKind {
@@ -12,6 +14,7 @@ impl std::fmt::Display for TargetKind {
         match self {
             Self::Modrinth => write!(f, "modrinth"),
             Self::Hangar => write!(f, "hangar"),
+            Self::CurseForge => write!(f, "curseforge"),
         }
     }
 }

@@ -1,3 +1,4 @@
+mod curseforge;
 mod hangar;
 mod modrinth;
 
@@ -6,6 +7,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
+pub use curseforge::CurseForgePublisher;
 pub use hangar::HangarPublisher;
 pub use modrinth::ModrinthPublisher;
 
@@ -29,6 +31,7 @@ impl Default for PublisherRegistry {
         };
         registry.register(Arc::new(ModrinthPublisher::new()));
         registry.register(Arc::new(HangarPublisher::new()));
+        registry.register(Arc::new(CurseForgePublisher::new()));
         registry
     }
 }

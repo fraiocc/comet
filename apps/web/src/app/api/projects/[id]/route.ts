@@ -99,12 +99,18 @@ export async function POST(
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  if (body.kind !== "modrinth" && body.kind !== "hangar") {
+  if (body.kind !== "modrinth" && body.kind !== "hangar" && body.kind !== "curseforge") {
     return NextResponse.json({ error: "Unsupported target kind" }, { status: 400 });
   }
   if (!body.externalProjectId?.trim() || !body.token?.trim()) {
     return NextResponse.json(
       { error: "externalProjectId and token are required" },
+      { status: 400 },
+    );
+  }
+  if (body.kind === "curseforge" && !/^\d+$/.test(body.externalProjectId.trim())) {
+    return NextResponse.json(
+      { error: "CurseForge project ID must be numeric (e.g. 238222)" },
       { status: 400 },
     );
   }
