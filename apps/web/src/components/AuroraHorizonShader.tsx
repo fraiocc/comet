@@ -181,12 +181,23 @@ export function AuroraHorizonShader({
     observer.observe(canvas);
     resize();
 
+    let visible = true;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        visible = entry?.isIntersecting ?? true;
+      },
+      { threshold: 0 },
+    );
+    io.observe(canvas);
+
     const start = performance.now();
     const draw = (now: number) => {
       if (!running) return;
-      const elapsed = reduceMotion ? 0 : ((now - start) / 1000) * speedRef.current;
-      gl.uniform1f(timeLoc, elapsed);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      if (visible && !document.hidden) {
+        const elapsed = reduceMotion ? 0 : ((now - start) / 1000) * speedRef.current;
+        gl.uniform1f(timeLoc, elapsed);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      }
       frame = requestAnimationFrame(draw);
     };
 
@@ -196,6 +207,7 @@ export function AuroraHorizonShader({
       running = false;
       cancelAnimationFrame(frame);
       observer.disconnect();
+      io.disconnect();
       gl.deleteBuffer(buffer);
       gl.deleteProgram(program);
       gl.deleteShader(vert);

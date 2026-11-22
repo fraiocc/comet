@@ -24,6 +24,7 @@ import {
 import { Modal } from "@/components/ui/Modal";
 import { Surface } from "@/components/ui/Surface";
 import type { PublishResultItem, TargetDependency } from "@/db/schema";
+import { formatBytes } from "@/lib/format";
 import type { GitHubReleaseSummary } from "@/lib/github";
 
 export interface TargetSummary {
@@ -74,12 +75,6 @@ function formatDateTime(iso: string): string {
   } catch {
     return iso;
   }
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function ProjectDetailClient({

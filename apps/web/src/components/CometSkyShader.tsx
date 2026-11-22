@@ -350,21 +350,32 @@ export function CometSkyShader({
     observer.observe(canvas);
     resize();
 
+    let visible = true;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        visible = entry?.isIntersecting ?? true;
+      },
+      { threshold: 0 },
+    );
+    io.observe(canvas);
+
     const start = performance.now();
     const draw = (now: number) => {
       if (!running) return;
-      const p = paramsRef.current;
-      const elapsed = reduceMotion ? 0 : ((now - start) / 1000) * p.speed;
-      const cloud = parseHex(p.cloudColor);
-      const skyTop = parseHex(p.skyTopColor);
-      const skyBottom = parseHex(p.skyBottomColor);
+      if (visible && !document.hidden) {
+        const p = paramsRef.current;
+        const elapsed = reduceMotion ? 0 : ((now - start) / 1000) * p.speed;
+        const cloud = parseHex(p.cloudColor);
+        const skyTop = parseHex(p.skyTopColor);
+        const skyBottom = parseHex(p.skyBottomColor);
 
-      gl.uniform1f(loc.time, elapsed);
-      gl.uniform1f(loc.count, Math.min(6, Math.max(1, p.count)));
-      gl.uniform3f(loc.cloud, cloud[0], cloud[1], cloud[2]);
-      gl.uniform3f(loc.skyTop, skyTop[0], skyTop[1], skyTop[2]);
-      gl.uniform3f(loc.skyBottom, skyBottom[0], skyBottom[1], skyBottom[2]);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
+        gl.uniform1f(loc.time, elapsed);
+        gl.uniform1f(loc.count, Math.min(6, Math.max(1, p.count)));
+        gl.uniform3f(loc.cloud, cloud[0], cloud[1], cloud[2]);
+        gl.uniform3f(loc.skyTop, skyTop[0], skyTop[1], skyTop[2]);
+        gl.uniform3f(loc.skyBottom, skyBottom[0], skyBottom[1], skyBottom[2]);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      }
       frame = requestAnimationFrame(draw);
     };
 
@@ -374,6 +385,7 @@ export function CometSkyShader({
       running = false;
       cancelAnimationFrame(frame);
       observer.disconnect();
+      io.disconnect();
       gl.deleteBuffer(buffer);
       gl.deleteProgram(program);
       gl.deleteShader(vert);

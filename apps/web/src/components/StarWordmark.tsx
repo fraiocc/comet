@@ -134,10 +134,23 @@ export function StarWordmark({ text = "comet" }: { text?: string }) {
     canvas.addEventListener("pointerleave", handlePointerLeave);
     canvas.addEventListener("click", handleClick);
 
+    let visible = true;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        visible = entry?.isIntersecting ?? true;
+      },
+      { threshold: 0 },
+    );
+    io.observe(canvas);
+
     const start = performance.now();
 
     function draw(now: number) {
       if (!running || !ctx) return;
+      if (!visible || document.hidden) {
+        frame = requestAnimationFrame(draw);
+        return;
+      }
       const elapsed = (now - start) / 1000;
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -214,6 +227,7 @@ export function StarWordmark({ text = "comet" }: { text?: string }) {
       running = false;
       cancelAnimationFrame(frame);
       observer.disconnect();
+      io.disconnect();
       canvas.removeEventListener("pointermove", handlePointerMove);
       canvas.removeEventListener("pointerleave", handlePointerLeave);
       canvas.removeEventListener("click", handleClick);

@@ -32,34 +32,35 @@ export default async function ProjectDetailPage({
     notFound();
   }
 
-  const projectTargets = await db
-    .select({
-      id: targets.id,
-      kind: targets.kind,
-      enabled: targets.enabled,
-      externalProjectId: targets.externalProjectId,
-      gameVersions: targets.gameVersions,
-      loaders: targets.loaders,
-      dependencies: targets.dependencies,
-      channel: targets.channel,
-      descriptionOverride: targets.descriptionOverride,
-    })
-    .from(targets)
-    .where(eq(targets.projectId, project.id));
-
-  const historyRows = await db
-    .select({
-      id: publishHistory.id,
-      releaseTag: publishHistory.releaseTag,
-      assetName: publishHistory.assetName,
-      source: publishHistory.source,
-      results: publishHistory.results,
-      createdAt: publishHistory.createdAt,
-    })
-    .from(publishHistory)
-    .where(eq(publishHistory.projectId, project.id))
-    .orderBy(desc(publishHistory.createdAt))
-    .limit(30);
+  const [projectTargets, historyRows] = await Promise.all([
+    db
+      .select({
+        id: targets.id,
+        kind: targets.kind,
+        enabled: targets.enabled,
+        externalProjectId: targets.externalProjectId,
+        gameVersions: targets.gameVersions,
+        loaders: targets.loaders,
+        dependencies: targets.dependencies,
+        channel: targets.channel,
+        descriptionOverride: targets.descriptionOverride,
+      })
+      .from(targets)
+      .where(eq(targets.projectId, project.id)),
+    db
+      .select({
+        id: publishHistory.id,
+        releaseTag: publishHistory.releaseTag,
+        assetName: publishHistory.assetName,
+        source: publishHistory.source,
+        results: publishHistory.results,
+        createdAt: publishHistory.createdAt,
+      })
+      .from(publishHistory)
+      .where(eq(publishHistory.projectId, project.id))
+      .orderBy(desc(publishHistory.createdAt))
+      .limit(30),
+  ]);
 
   const initialHistory = historyRows.map((row) => ({
     ...row,

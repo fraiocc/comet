@@ -10,9 +10,10 @@ pub async fn run() -> Result<()> {
 
     let pb = ui::spinner("Fetching workspace status...");
     let client = CometClient::new(&api_url, &token);
-    let user = client.whoami().await?;
-    let projects = client.list_projects().await?;
+    let (user_res, projects_res) = tokio::join!(client.whoami(), client.list_projects());
     pb.finish_and_clear();
+    let user = user_res?;
+    let projects = projects_res?;
 
     let mut lines = vec![
         format!(

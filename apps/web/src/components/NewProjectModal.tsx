@@ -8,6 +8,7 @@ import { FieldLabel, Input } from "@/components/ui/Field";
 import { FormAlert } from "@/components/ui/FieldError";
 import { CheckIcon, GitHubIcon } from "@/components/ui/Icons";
 import { Modal } from "@/components/ui/Modal";
+import { formatBytes } from "@/lib/format";
 import type { GitHubReleaseSummary, GitHubRepoSummary } from "@/lib/github";
 
 interface CreatedProject {
@@ -34,12 +35,6 @@ function suggestAssetPattern(releases: GitHubReleaseSummary[]): string {
     return `*${firstAsset.name.slice(dotIdx)}`;
   }
   return firstAsset.name;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function NewProjectModal({

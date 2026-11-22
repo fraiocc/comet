@@ -20,8 +20,10 @@ pub async fn run() -> Result<()> {
                 Some(tok) => {
                     let pb = ui::spinner("Connecting to Comet...");
                     let client = CometClient::new(&api_url, tok);
-                    let user = client.whoami().await.ok();
-                    let count = client.list_projects().await.ok().map(|p| p.len());
+                    let (user_res, projects_res) =
+                        tokio::join!(client.whoami(), client.list_projects());
+                    let user = user_res.ok();
+                    let count = projects_res.ok().map(|p| p.len());
                     pb.finish_and_clear();
                     (user.map(|u| u.username), count)
                 }
