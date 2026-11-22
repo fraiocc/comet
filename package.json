@@ -1,6 +1,7 @@
 {
   "name": "comet",
   "private": true,
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev:web": "pnpm --filter @comet/web dev",
     "dev:cli": "cargo run -p comet-cli --",
