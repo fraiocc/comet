@@ -1,0 +1,15 @@
+/target/
+**/*.rs.bk
+node_modules/
+.next/
+out/
+dist/
+.turbo/
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

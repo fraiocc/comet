@@ -1,0 +1,17 @@
+{
+  "name": "comet",
+  "private": true,
+  "scripts": {
+    "dev:web": "pnpm --filter @comet/web dev",
+    "dev:cli": "cargo run -p comet-cli --",
+    "build:web": "pnpm --filter @comet/web build",
+    "build:cli": "cargo build -p comet-cli --release",
+    "lint:web": "pnpm --filter @comet/web lint",
+    "typecheck:web": "pnpm --filter @comet/web typecheck",
+    "test:rust": "cargo test --workspace",
+    "check:rust": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings",
+    "db:generate": "pnpm --filter @comet/web db:generate",
+    "db:push": "pnpm --filter @comet/web db:push",
+    "db:studio": "pnpm --filter @comet/web db:studio"
+  }
+}

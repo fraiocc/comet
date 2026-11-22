@@ -1,0 +1,85 @@
+name: "Comet Publish"
+description: "Publish a GitHub Release to configured targets (Modrinth, Hangar, etc.) using Comet"
+inputs:
+  comet-token:
+    description: "Comet API token generated from the Comet web dashboard"
+    required: true
+  repo:
+    description: "GitHub repository in owner/name format"
+    required: false
+    default: ${{ github.repository }}
+  tag:
+    description: "Release tag to publish (defaults to latest release)"
+    required: false
+    default: ""
+  api-url:
+    description: "Comet web API base URL"
+    required: false
+    default: "https://comet.fraio.cc"
+  cli-version:
+    description: "Comet CLI release tag to download (defaults to latest)"
+    required: false
+    default: "latest"
+runs:
+  using: "composite"
+  steps:
+    - name: Download prebuilt Comet CLI
+      id: download
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        VERSION="${{ inputs.cli-version }}"
+        if [ "$VERSION" = "latest" ]; then
+          API_URL="https://api.github.com/repos/fraiocc/comet/releases/latest"
+        else
+          API_URL="https://api.github.com/repos/fraiocc/comet/releases/tags/${VERSION}"
+        fi
+
+        if [ "${{ runner.os }}" = "Windows" ]; then
+          PATTERN='https://[^"]+comet-windows-x86_64\.exe'
+        elif [ "${{ runner.os }}" = "Linux" ]; then
+          PATTERN='https://[^"]+x86_64-unknown-linux-musl\.tar\.gz'
+        else
+          exit 0
+        fi
+
+        RELEASE_JSON="$(curl -fsSL \
+          -H "User-Agent: comet-action" \
+          -H "Authorization: Bearer ${GH_TOKEN}" \
+          "$API_URL" 2>/dev/null || true)"
+        ASSET_URL="$(printf '%s' "$RELEASE_JSON" | grep -oE "$PATTERN" | head -n 1 || true)"
+
+        if [ -n "$ASSET_URL" ]; then
+          mkdir -p "$RUNNER_TEMP/comet"
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            curl -fsSL "$ASSET_URL" -o "$RUNNER_TEMP/comet/comet.exe"
+            echo "bin=$RUNNER_TEMP/comet/comet.exe" >> "$GITHUB_OUTPUT"
+          else
+            curl -fsSL "$ASSET_URL" -o "$RUNNER_TEMP/comet/comet.tar.gz"
+            tar -xzf "$RUNNER_TEMP/comet/comet.tar.gz" -C "$RUNNER_TEMP/comet"
+            chmod +x "$RUNNER_TEMP/comet/comet"
+            echo "bin=$RUNNER_TEMP/comet/comet" >> "$GITHUB_OUTPUT"
+          fi
+        fi
+
+    - name: Install Rust toolchain (fallback)
+      if: steps.download.outputs.bin == ''
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Run Comet CLI
+      shell: bash
+      env:
+        COMET_TOKEN: ${{ inputs.comet-token }}
+        COMET_API_URL: ${{ inputs.api-url }}
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        ARGS=(publish --repo "${{ inputs.repo }}" --yes)
+        if [ -n "${{ inputs.tag }}" ]; then
+          ARGS+=(--tag "${{ inputs.tag }}")
+        fi
+        if [ -n "${{ steps.download.outputs.bin }}" ]; then
+          "${{ steps.download.outputs.bin }}" "${ARGS[@]}"
+        else
+          cargo run --release --manifest-path "${{ github.action_path }}/Cargo.toml" -p comet-cli -- "${ARGS[@]}"
+        fi

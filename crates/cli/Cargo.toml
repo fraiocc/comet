@@ -1,0 +1,22 @@
+[package]
+name = "comet-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "comet"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+comet-core = { path = "../core" }
+console.workspace = true
+dialoguer.workspace = true
+indicatif.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
