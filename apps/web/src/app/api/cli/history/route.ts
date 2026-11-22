@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { projects, publishHistory, type PublishResultItem } from "@/db/schema";
 import { authenticateCliRequest } from "@/lib/auth";
 import { sendDiscordReleaseEmbed } from "@/lib/discord";
+import { isUuid } from "@/lib/validation";
 
 export async function POST(req: NextRequest) {
   const user = await authenticateCliRequest(req.headers.get("authorization"));
@@ -12,17 +13,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = (await req.json()) as {
+  const body = (await req.json().catch(() => null)) as {
     projectId?: string;
     releaseTag?: string;
     assetName?: string;
     source?: string;
     results?: PublishResultItem[];
-  };
+  } | null;
 
-  if (!body.projectId || !body.releaseTag?.trim() || !body.assetName?.trim()) {
+  if (!body || !body.projectId || !isUuid(body.projectId) || !body.releaseTag?.trim() || !body.assetName?.trim()) {
     return NextResponse.json(
-      { error: "projectId, releaseTag, and assetName are required" },
+      { error: "Valid projectId, releaseTag, and assetName are required" },
       { status: 400 },
     );
   }

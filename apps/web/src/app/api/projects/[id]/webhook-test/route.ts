@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { projects } from "@/db/schema";
 import { getSessionUser } from "@/lib/auth";
 import { sendDiscordTestEmbed } from "@/lib/discord";
+import { isUuid } from "@/lib/validation";
 
 export async function POST(
   req: NextRequest,
@@ -16,6 +17,9 @@ export async function POST(
   }
 
   const { id } = await context.params;
+  if (!isUuid(id)) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
   const [project] = await db
     .select()
     .from(projects)

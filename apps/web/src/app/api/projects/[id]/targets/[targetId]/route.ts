@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { projects, targets, type TargetDependency } from "@/db/schema";
 import { getSessionUser } from "@/lib/auth";
 import { encryptSecret } from "@/lib/crypto";
+import { isUuid } from "@/lib/validation";
 
 export async function PATCH(
   req: NextRequest,
@@ -16,6 +17,9 @@ export async function PATCH(
   }
 
   const { id, targetId } = await context.params;
+  if (!isUuid(id) || !isUuid(targetId)) {
+    return NextResponse.json({ error: "Target not found" }, { status: 404 });
+  }
   const [project] = await db
     .select({ id: projects.id })
     .from(projects)
@@ -89,6 +93,10 @@ export async function DELETE(
   }
 
   const { id, targetId } = await context.params;
+  if (!isUuid(id) || !isUuid(targetId)) {
+    return NextResponse.json({ error: "Target not found" }, { status: 404 });
+  }
+
   const [project] = await db
     .select({ id: projects.id })
     .from(projects)

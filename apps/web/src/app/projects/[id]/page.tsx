@@ -6,6 +6,7 @@ import { ProjectDetailClient } from "@/components/ProjectDetailClient";
 import { db } from "@/db";
 import { projects, publishHistory, targets } from "@/db/schema";
 import { getSessionUser } from "@/lib/auth";
+import { isUuid } from "@/lib/validation";
 
 export default async function ProjectDetailPage({
   params,
@@ -18,6 +19,9 @@ export default async function ProjectDetailPage({
   }
 
   const { id } = await params;
+  if (!isUuid(id)) {
+    notFound();
+  }
   const [project] = await db
     .select()
     .from(projects)

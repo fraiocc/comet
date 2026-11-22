@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { projects, targets } from "@/db/schema";
 import { authenticateCliRequest } from "@/lib/auth";
+import { isUuid } from "@/lib/validation";
 
 export async function PATCH(
   req: NextRequest,
@@ -15,6 +16,9 @@ export async function PATCH(
   }
 
   const { targetId } = await context.params;
+  if (!isUuid(targetId)) {
+    return NextResponse.json({ error: "Target not found" }, { status: 404 });
+  }
   const body = (await req.json().catch(() => ({}))) as { enabled?: boolean };
 
   if (typeof body.enabled !== "boolean") {

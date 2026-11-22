@@ -6,6 +6,7 @@ import { projects, targets, type TargetDependency } from "@/db/schema";
 import { getSessionUser } from "@/lib/auth";
 import { encryptSecret } from "@/lib/crypto";
 import { isValidDiscordWebhookUrl } from "@/lib/discord";
+import { isUuid } from "@/lib/validation";
 
 export async function PATCH(
   req: NextRequest,
@@ -17,12 +18,19 @@ export async function PATCH(
   }
 
   const { id } = await context.params;
-  const body = (await req.json()) as {
+  if (!isUuid(id)) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
+
+  const body = (await req.json().catch(() => null)) as {
     assetPattern?: string;
     defaultChangelog?: string | null;
     displayName?: string;
     discordWebhookUrl?: string | null;
-  };
+  } | null;
+  if (!body) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
 
   const webhook = body.discordWebhookUrl?.trim() || null;
   if (webhook && !isValidDiscordWebhookUrl(webhook)) {
@@ -32,12 +40,13 @@ export async function PATCH(
     );
   }
 
+  const trimmedDisplayName = body.displayName?.trim();
   const [updated] = await db
     .update(projects)
     .set({
       assetPattern: body.assetPattern?.trim() || "*.jar",
       defaultChangelog: body.defaultChangelog ?? null,
-      displayName: body.displayName?.trim(),
+      ...(trimmedDisplayName ? { displayName: trimmedDisplayName } : {}),
       discordWebhookUrl: webhook,
       updatedAt: new Date(),
     })
@@ -61,6 +70,10 @@ export async function POST(
   }
 
   const { id } = await context.params;
+  if (!isUuid(id)) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
+
   const [project] = await db
     .select()
     .from(projects)
@@ -71,7 +84,7 @@ export async function POST(
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  const body = (await req.json()) as {
+  const body = (await req.json().catch(() => null)) as {
     kind?: string;
     enabled?: boolean;
     externalProjectId?: string;
@@ -81,7 +94,10 @@ export async function POST(
     dependencies?: TargetDependency[];
     channel?: string | null;
     descriptionOverride?: string | null;
-  };
+  } | null;
+  if (!body) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
 
   if (body.kind !== "modrinth" && body.kind !== "hangar") {
     return NextResponse.json({ error: "Unsupported target kind" }, { status: 400 });
@@ -132,6 +148,10 @@ export async function DELETE(
   }
 
   const { id } = await context.params;
+  if (!isUuid(id)) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
+
   const [deleted] = await db
     .delete(projects)
     .where(and(eq(projects.id, id), eq(projects.userId, user.id)))

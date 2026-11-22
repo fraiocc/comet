@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { Button, LinkButton } from "@/components/ui/Button";
 import { FieldLabel, Input } from "@/components/ui/Field";
+import { FormAlert } from "@/components/ui/FieldError";
 import { CheckIcon, GitHubIcon } from "@/components/ui/Icons";
 import { Modal } from "@/components/ui/Modal";
 import type { GitHubReleaseSummary, GitHubRepoSummary } from "@/lib/github";
@@ -62,6 +63,7 @@ export function NewProjectModal({
   const [assetPattern, setAssetPattern] = useState("*.jar");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const releaseReqRef = useRef(0);
 
   useEffect(() => {
     if (!open || !hasGithubToken) return;
@@ -94,6 +96,7 @@ export function NewProjectModal({
   }, [open, hasGithubToken]);
 
   async function handleSelectRepo(repo: GitHubRepoSummary) {
+    const reqId = ++releaseReqRef.current;
     setSelectedRepo(repo);
     setDisplayName(repo.name);
     setSubmitError(null);
@@ -107,6 +110,7 @@ export function NewProjectModal({
       const data = (await resp.json().catch(() => ({}))) as {
         releases?: GitHubReleaseSummary[];
       };
+      if (releaseReqRef.current !== reqId) return;
       if (resp.ok && data.releases) {
         setReleases(data.releases);
         if (data.releases.length > 0) {
@@ -114,7 +118,9 @@ export function NewProjectModal({
         }
       }
     } finally {
-      setLoadingReleases(false);
+      if (releaseReqRef.current === reqId) {
+        setLoadingReleases(false);
+      }
     }
   }
 
@@ -277,12 +283,8 @@ export function NewProjectModal({
           )}
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {submitError && (
-            <div className="rounded-xl bg-[var(--danger-bg)] px-4 py-3 text-sm text-[var(--danger)]">
-              {submitError}
-            </div>
-          )}
+        <form onSubmit={handleSubmit} noValidate className="space-y-5">
+          <FormAlert message={submitError} />
 
           <div className="space-y-4 rounded-2xl bg-[var(--bg)]/55 p-5">
             <div className="flex items-center justify-between gap-4 rounded-xl bg-[var(--surface)] px-4 py-3.5">

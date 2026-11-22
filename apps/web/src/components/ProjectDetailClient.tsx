@@ -629,7 +629,7 @@ export function ProjectDetailClient({
             <h2 className="text-lg font-semibold text-white">{t("settingsTitle")}</h2>
             <p className="mt-1 text-sm text-[var(--muted)]">{t("settingsSubtitle")}</p>
 
-            <form onSubmit={handleSaveSettings} className="mt-6 space-y-5">
+            <form onSubmit={handleSaveSettings} noValidate className="mt-6 space-y-5">
               <div>
                 <FieldLabel htmlFor="displayName">{t("displayNameLabel")}</FieldLabel>
                 <Input

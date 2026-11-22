@@ -25,11 +25,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = (await req.json()) as {
+  const body = (await req.json().catch(() => null)) as {
     repoFullName?: string;
     displayName?: string;
     assetPattern?: string;
-  };
+  } | null;
+  if (!body) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
 
   const repoFullName = body.repoFullName?.trim();
   const displayName = body.displayName?.trim();
@@ -37,6 +40,15 @@ export async function POST(req: NextRequest) {
 
   if (!repoFullName || !repoFullName.includes("/")) {
     return NextResponse.json({ error: "repoFullName must be owner/repo" }, { status: 400 });
+  }
+
+  const existing = await db
+    .select({ repoFullName: projects.repoFullName })
+    .from(projects)
+    .where(eq(projects.userId, user.id));
+
+  if (existing.some((p) => p.repoFullName.toLowerCase() === repoFullName.toLowerCase())) {
+    return NextResponse.json({ error: "This repository is already added" }, { status: 409 });
   }
 
   const [created] = await db

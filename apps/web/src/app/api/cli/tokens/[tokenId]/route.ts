@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { cliTokens } from "@/db/schema";
 import { getSessionUser } from "@/lib/auth";
+import { isUuid } from "@/lib/validation";
 
 export async function DELETE(
   _req: NextRequest,
@@ -15,6 +16,9 @@ export async function DELETE(
   }
 
   const { tokenId } = await context.params;
+  if (!isUuid(tokenId)) {
+    return NextResponse.json({ error: "Token not found" }, { status: 404 });
+  }
   const [deleted] = await db
     .delete(cliTokens)
     .where(and(eq(cliTokens.id, tokenId), eq(cliTokens.userId, user.id)))
