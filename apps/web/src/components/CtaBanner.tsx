@@ -1,4 +1,4 @@
-import { AuroraHorizonShader } from "@/components/AuroraHorizonShader";
+import { PlanetHorizonShader } from "@/components/PlanetHorizonShader";
 import { LinkButton } from "@/components/ui/Button";
 import { CometLogo } from "@/components/ui/CometLogo";
 import { ArrowRightIcon } from "@/components/ui/Icons";
@@ -23,7 +23,7 @@ export function CtaBanner({
   return (
     <section className="mt-16 sm:mt-24">
       <div className="overflow-hidden rounded-[24px] ring-1 ring-inset ring-white/[0.08] sm:rounded-[32px]">
-        <AuroraHorizonShader>
+        <PlanetHorizonShader>
           <div className="flex flex-col items-center px-6 py-12 text-center sm:px-8 sm:py-20">
             <CometLogo size={52} />
             <h2 className="mt-5 max-w-xl text-2xl font-semibold tracking-tight text-white sm:mt-6 sm:text-4xl">
@@ -56,7 +56,7 @@ export function CtaBanner({
               )}
             </div>
           </div>
-        </AuroraHorizonShader>
+        </PlanetHorizonShader>
       </div>
     </section>
   );

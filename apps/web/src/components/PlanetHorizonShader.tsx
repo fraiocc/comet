@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 
-export type AuroraHorizonShaderProps = {
+export type PlanetHorizonShaderProps = {
   className?: string;
   children?: React.ReactNode;
   speed?: number;
@@ -112,11 +112,11 @@ function compile(gl: WebGLRenderingContext, type: number, source: string) {
   return shader;
 }
 
-export function AuroraHorizonShader({
+export function PlanetHorizonShader({
   className,
   children,
   speed = 0.8,
-}: AuroraHorizonShaderProps) {
+}: PlanetHorizonShaderProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const speedRef = useRef(speed);
 
