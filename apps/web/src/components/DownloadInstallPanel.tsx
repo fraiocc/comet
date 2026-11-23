@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { CheckIcon, ExternalLinkIcon, TerminalIcon } from "@/components/ui/Icons";
-import { APP_VERSION } from "@/lib/version";
+import { CLI_VERSION } from "@/lib/version";
 
 type ShellTab = "powershell" | "cmd" | "unix" | "cargo";
 
@@ -85,7 +85,7 @@ export function DownloadInstallPanel({ baseUrl, repoUrl }: DownloadInstallPanelP
 
         <span className="hidden items-center gap-1.5 font-mono text-xs text-[var(--subtle)] sm:inline-flex">
           <TerminalIcon className="h-3.5 w-3.5" />
-          comet-cli v{APP_VERSION}
+          comet-cli v{CLI_VERSION}
         </span>
       </div>
 

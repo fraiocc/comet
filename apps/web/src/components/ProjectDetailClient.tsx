@@ -24,6 +24,7 @@ import {
 import { Modal } from "@/components/ui/Modal";
 import { Surface } from "@/components/ui/Surface";
 import type { PublishResultItem, TargetDependency } from "@/db/schema";
+import type { BadgeStyle } from "@/lib/badge";
 import { formatBytes } from "@/lib/format";
 import type { GitHubReleaseSummary } from "@/lib/github";
 
@@ -99,6 +100,7 @@ export function ProjectDetailClient({
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<ProjectTab>("targets");
+  const [badgeStyle, setBadgeStyle] = useState<BadgeStyle>("card");
   const [displayName, setDisplayName] = useState(project.displayName);
   const [assetPattern, setAssetPattern] = useState(project.assetPattern);
   const [defaultChangelog, setDefaultChangelog] = useState(project.defaultChangelog ?? "");
@@ -822,6 +824,54 @@ export function ProjectDetailClient({
                 />
                 <CopyField
                   value={`comet publish --repo ${project.repoFullName} --dry-run`}
+                  copyLabel={t("copy")}
+                  copiedLabel={t("copied")}
+                />
+              </div>
+            </Surface>
+
+            <Surface className="rounded-[24px] p-7">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-base font-semibold text-white">{t("badgeTitle")}</h2>
+                <div className="flex items-center gap-1 rounded-full bg-[var(--bg)]/70 p-1">
+                  {(
+                    [
+                      { id: "card", label: t("badgeStyleCard") },
+                      { id: "strip", label: t("badgeStyleStrip") },
+                      { id: "pill", label: t("badgeStylePill") },
+                    ] as const
+                  ).map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setBadgeStyle(opt.id)}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                        badgeStyle === opt.id
+                          ? "bg-[#1a6dff] text-white"
+                          : "text-[var(--muted)] hover:text-white"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+                {t("badgeSubtitle")}
+              </p>
+
+              <div className="mt-4 flex min-h-[108px] items-center justify-center overflow-x-auto rounded-2xl bg-[var(--bg)]/70 p-4 ring-1 ring-inset ring-white/[0.05]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`/api/badge/${project.repoFullName}?style=${badgeStyle}`}
+                  alt={`${displayName} release badge`}
+                  className="max-w-full"
+                />
+              </div>
+
+              <div className="mt-3.5">
+                <CopyField
+                  value={`[![${displayName}](https://comet.fraio.cc/api/badge/${project.repoFullName}?style=${badgeStyle})](https://github.com/${project.repoFullName}/releases/latest)`}
                   copyLabel={t("copy")}
                   copiedLabel={t("copied")}
                 />

@@ -5,7 +5,7 @@ import { GalaxyFooterShader } from "@/components/GalaxyFooterShader";
 import { StarWordmark } from "@/components/StarWordmark";
 import { CometLogo } from "@/components/ui/CometLogo";
 import { GitHubIcon } from "@/components/ui/Icons";
-import { APP_VERSION } from "@/lib/version";
+import { CLI_VERSION } from "@/lib/version";
 
 const GITHUB_REPO_URL =
   process.env.NEXT_PUBLIC_GITHUB_REPO_URL ?? "https://github.com/fraiocc/comet";
@@ -84,7 +84,7 @@ export async function Footer() {
 
           <div className="mt-14 flex flex-wrap items-center justify-between gap-4 border-t border-white/[0.08] pt-6 text-xs text-white/55">
             <span>{t("home.footerNote")}</span>
-            <span className="font-mono">comet-cli · v{APP_VERSION}</span>
+            <span className="font-mono">comet-cli · v{CLI_VERSION}</span>
           </div>
 
           <StarWordmark text="comet" />

@@ -10,7 +10,7 @@ Open-source release publisher built in Rust for Minecraft plugins, mods, and dev
 - **Conventional Commits Changelog Generator** — generates categorized Markdown release notes directly from your local Git history (`comet changelog` / `comet publish --auto-changelog`).
 - **Pre-Flight Validation & Diagnostics** — live token, project, and asset-pattern checks (`comet validate`, `comet doctor`), GitHub Release browser (`comet releases`), and local publish history (`comet history`).
 - **GitHub Actions** — composite action (`fraiocc/comet@v1`) downloads the prebuilt static binary and publishes automatically on every release.
-- **Workspace Dashboard & Webhooks** — sidebar web dashboard on [comet.fraio.cc](https://comet.fraio.cc) with publish history, Discord webhook notifications, AES-256-GCM encrypted platform tokens, and SHA-256 hashed CLI tokens.
+- **Workspace Dashboard & Webhooks** — sidebar web dashboard on [comet.fraio.cc](https://comet.fraio.cc) with publish history, Discord webhook notifications, live dynamic README SVG badges, AES-256-GCM encrypted platform tokens, and SHA-256 hashed CLI tokens.
 
 ## Install CLI
 
@@ -97,6 +97,23 @@ jobs:
 ```
 
 Optional inputs: `repo` (defaults to `${{ github.repository }}`), `tag` (defaults to latest release), `api-url` (defaults to `https://comet.fraio.cc`), `cli-version` (defaults to `latest`).
+
+## Dynamic README Badges
+
+Embed a live SVG badge in your repository's `README.md` that automatically updates with the latest version and platforms successfully published via Comet:
+
+```markdown
+<!-- Release Card (default) -->
+[![Releases](https://comet.fraio.cc/api/badge/owner/repo?style=card)](https://github.com/owner/repo/releases/latest)
+
+<!-- Compact Strip -->
+[![Releases](https://comet.fraio.cc/api/badge/owner/repo?style=strip)](https://github.com/owner/repo/releases/latest)
+
+<!-- Mini Pill -->
+[![Releases](https://comet.fraio.cc/api/badge/owner/repo?style=pill)](https://github.com/owner/repo/releases/latest)
+```
+
+You can also preview and copy your project's live badge directly from the **Settings** tab on [comet.fraio.cc](https://comet.fraio.cc/dashboard).
 
 ## Repository Structure
 

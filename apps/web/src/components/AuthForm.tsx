@@ -11,7 +11,7 @@ import { CometLogo } from "@/components/ui/CometLogo";
 import { FieldLabel } from "@/components/ui/Field";
 import { FieldError, FormAlert } from "@/components/ui/FieldError";
 import { GitHubIcon } from "@/components/ui/Icons";
-import { APP_VERSION } from "@/lib/version";
+import { CLI_VERSION } from "@/lib/version";
 
 interface AuthFormProps {
   mode: "login" | "register";
@@ -236,7 +236,7 @@ export function AuthForm({ mode, initialError }: AuthFormProps) {
           </p>
         </div>
 
-        <p className="font-mono text-xs text-[var(--subtle)]">comet-cli · v{APP_VERSION}</p>
+        <p className="font-mono text-xs text-[var(--subtle)]">comet-cli · v{CLI_VERSION}</p>
       </div>
 
       <div className="hidden p-4 lg:col-span-7 lg:block">
