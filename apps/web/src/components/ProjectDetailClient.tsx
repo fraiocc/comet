@@ -292,7 +292,7 @@ export function ProjectDetailClient({
           </div>
         </div>
 
-        <div className="flex items-center gap-1 border-b border-white/[0.06]">
+        <div className="-mx-4 flex items-center gap-1 overflow-x-auto border-b border-white/[0.06] px-4 sm:mx-0 sm:px-0">
           {(
             [
               { id: "targets", label: t("tabTargets"), count: targetList.length },

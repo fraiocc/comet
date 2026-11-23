@@ -68,9 +68,9 @@ export default async function ProjectDetailPage({
   }));
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-x-clip">
       <Navbar username={user.username} />
-      <main className="mx-auto max-w-6xl px-6 py-12 sm:px-8">
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-8 sm:py-12">
         <ProjectDetailClient
           project={project}
           initialTargets={projectTargets}
