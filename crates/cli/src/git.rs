@@ -17,10 +17,9 @@ pub fn parse_github_remote(remote: &str) -> Option<String> {
 
     let path = if let Some(rest) = trimmed.strip_prefix("git@github.com:") {
         rest
-    } else if let Some(idx) = trimmed.find("github.com/") {
-        &trimmed[idx + "github.com/".len()..]
     } else {
-        return None;
+        let idx = trimmed.find("github.com/")?;
+        &trimmed[idx + "github.com/".len()..]
     };
 
     let mut parts = path.split('/');
