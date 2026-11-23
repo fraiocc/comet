@@ -13,7 +13,8 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    /// Link your Comet web account to the CLI
+    /// Link or switch your Comet web account
+    #[command(alias = "account")]
     Login(LoginArgs),
     /// Clear the saved CLI token
     Logout,

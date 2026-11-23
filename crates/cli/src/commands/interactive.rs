@@ -1,9 +1,66 @@
 use anyhow::Result;
 use comet_core::{CliConfig, CometClient};
-use dialoguer::Select;
+use dialoguer::Input;
 
 use crate::commands::{doctor, init, login, logout, publish, status, targets};
 use crate::ui;
+
+fn print_help() {
+    let lines = vec![
+        format!(
+            "{}  {}",
+            ui::sky("publish "),
+            ui::muted("Publish a GitHub Release to configured targets")
+        ),
+        format!(
+            "{}  {}",
+            ui::sky("dry-run "),
+            ui::muted("Preview release plan without uploading")
+        ),
+        format!(
+            "{}  {}",
+            ui::sky("targets "),
+            ui::muted("Enable or disable targets for a project")
+        ),
+        format!(
+            "{}  {}",
+            ui::sky("init    "),
+            ui::muted("Register the current GitHub repository in Comet")
+        ),
+        format!(
+            "{}  {}",
+            ui::sky("status  "),
+            ui::muted("Show workspace account and configured projects")
+        ),
+        format!(
+            "{}  {}",
+            ui::sky("doctor  "),
+            ui::muted("Run configuration and connection diagnostics")
+        ),
+        format!(
+            "{}  {}",
+            ui::sky("account "),
+            ui::muted("Sign in or switch your Comet account")
+        ),
+        format!(
+            "{}  {}",
+            ui::sky("logout  "),
+            ui::muted("Clear the saved CLI token")
+        ),
+        format!(
+            "{}  {}",
+            ui::sky("clear   "),
+            ui::muted("Clear the terminal screen")
+        ),
+        format!(
+            "{}  {}",
+            ui::sky("help    "),
+            ui::muted("Show this command list")
+        ),
+        format!("{}  {}", ui::sky("exit    "), ui::muted("Exit Comet CLI")),
+    ];
+    ui::print_box(&ui::starlight_bold("Commands"), &lines);
+}
 
 pub async fn run() -> Result<()> {
     let theme = ui::theme();
@@ -30,84 +87,88 @@ pub async fn run() -> Result<()> {
                 None => (None, None),
             };
             ui::print_welcome(account.as_deref(), &api_url, project_count);
+            if token.is_some() {
+                println!(
+                    "  {}",
+                    ui::muted(
+                        "Commands: publish · dry-run · targets · init · status · doctor · help · exit"
+                    )
+                );
+            } else {
+                println!(
+                    "  {}",
+                    ui::muted("Type 'account' to sign in, 'help' for commands, or 'exit' to quit.")
+                );
+            }
+            println!();
         }
 
-        if token.is_none() {
-            let choices = ["Login to Comet", "Exit"];
-            let selection = Select::with_theme(&theme)
-                .with_prompt("Action")
-                .items(&choices)
-                .default(0)
-                .interact()?;
+        let input: String = match Input::with_theme(&theme)
+            .with_prompt("comet")
+            .allow_empty(true)
+            .interact_text()
+        {
+            Ok(line) => line,
+            Err(_) => break,
+        };
 
-            println!();
-            match selection {
-                0 => {
-                    if let Err(err) = login::run(Default::default()).await {
-                        ui::print_err(&err.to_string());
-                    } else {
-                        first_render = true;
-                    }
-                    println!();
-                }
-                _ => break,
-            }
+        let raw = input.trim().trim_start_matches('/');
+        if raw.is_empty() {
             continue;
         }
 
-        let choices = [
-            "Publish a release",
-            "Dry run (preview only)",
-            "Toggle targets (enable / disable)",
-            "Initialize repository (init)",
-            "Workspace status",
-            "Run diagnostics (doctor)",
-            "Switch account / login",
-            "Logout",
-            "Exit",
-        ];
-
-        let selection = Select::with_theme(&theme)
-            .with_prompt("Action")
-            .items(&choices)
-            .default(0)
-            .interact()?;
-
+        let cmd = raw.split_whitespace().next().unwrap_or("").to_lowercase();
         println!();
-        let result = match selection {
-            0 => publish::run(Default::default()).await,
-            1 => {
-                publish::run(crate::cli::PublishArgs {
-                    dry_run: true,
-                    ..Default::default()
-                })
-                .await
+
+        let result = match cmd.as_str() {
+            "exit" | "quit" | "q" => break,
+            "help" | "h" | "?" => {
+                print_help();
+                Ok(())
             }
-            2 => targets::run().await,
-            3 => {
-                let res = init::run().await;
-                if res.is_ok() {
-                    first_render = true;
-                }
-                res
+            "clear" | "cls" => {
+                let _ = console::Term::stdout().clear_screen();
+                first_render = true;
+                continue;
             }
-            4 => status::run().await,
-            5 => doctor::run().await,
-            6 => {
+            "account" | "login" => {
                 let res = login::run(Default::default()).await;
                 if res.is_ok() {
                     first_render = true;
                 }
                 res
             }
-            7 => {
+            "logout" => {
                 let res = logout::run();
                 if res.is_ok() {
                     first_render = true;
                 }
                 res
             }
-            _ => break,
+            "publish" | "p" => publish::run(Default::default()).await,
+            "dry-run" | "dry" | "d" => {
+                publish::run(crate::cli::PublishArgs {
+                    dry_run: true,
+                    ..Default::default()
+                })
+                .await
+            }
+            "targets" | "t" => targets::run().await,
+            "init" | "i" => {
+                let res = init::run().await;
+                if res.is_ok() {
+                    first_render = true;
+                }
+                res
+            }
+            "status" | "s" => status::run().await,
+            "doctor" => doctor::run().await,
+            _ => {
+                ui::print_err(&format!(
+                    "Unknown command '{cmd}'. Type 'help' to see available commands."
+                ));
+                Ok(())
+            }
         };
 
         if let Err(err) = result {

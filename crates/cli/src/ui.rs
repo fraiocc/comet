@@ -160,7 +160,7 @@ pub fn print_welcome(account: Option<&str>, api_url: &str, project_count: Option
         None => format!(
             "{}  {}",
             muted("Tip     "),
-            muted("Select Login below to connect your workspace")
+            muted("Type 'account' to connect your workspace")
         ),
     };
 
