@@ -11,6 +11,34 @@ export default async function ChangelogPage() {
 
   const releases: ChangelogRelease[] = [
     {
+      id: "web-0-4-0",
+      product: "web",
+      version: t("w4Version"),
+      date: t("w4Date"),
+      month: t("w4Month"),
+      year: t("w4Year"),
+      title: t("w4Title"),
+      summary: t("w4Summary"),
+      features: [
+        { title: t("w4Feat1Title"), desc: t("w4Feat1Desc") },
+        { title: t("w4Feat2Title"), desc: t("w4Feat2Desc") },
+      ],
+    },
+    {
+      id: "cli-0-4-0",
+      product: "cli",
+      version: t("c4Version"),
+      date: t("c4Date"),
+      month: t("c4Month"),
+      year: t("c4Year"),
+      title: t("c4Title"),
+      summary: t("c4Summary"),
+      features: [
+        { title: t("c4Feat1Title"), desc: t("c4Feat1Desc") },
+        { title: t("c4Feat2Title"), desc: t("c4Feat2Desc") },
+      ],
+    },
+    {
       id: "web-0-3-0",
       product: "web",
       version: t("w3Version"),
