@@ -49,7 +49,7 @@ pub struct WhoamiResponse {
 impl CometClient {
     pub fn new(base_url: impl Into<String>, token: impl Into<String>) -> Self {
         Self {
-            http: reqwest::Client::new(),
+            http: crate::http::build_client(30),
             base_url: base_url.into().trim_end_matches('/').to_string(),
             token: token.into(),
         }

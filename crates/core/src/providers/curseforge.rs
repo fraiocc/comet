@@ -26,7 +26,7 @@ impl Default for CurseForgePublisher {
 impl CurseForgePublisher {
     pub fn new() -> Self {
         Self {
-            http: Client::new(),
+            http: crate::http::build_client(120),
         }
     }
 
@@ -232,10 +232,16 @@ impl Publisher for CurseForgePublisher {
             Some(CfRelations { projects })
         };
 
+        let display_name = if req.release.name.trim().is_empty() {
+            &req.release.tag_name
+        } else {
+            &req.release.name
+        };
+
         let metadata = CfUploadMetadata {
             changelog: &req.changelog,
             changelog_type: "markdown",
-            display_name: &req.release.name,
+            display_name,
             game_versions: game_version_ids,
             release_type: req.version_type.to_string(),
             relations,
@@ -293,5 +299,65 @@ impl Publisher for CurseForgePublisher {
                 uploaded.id
             )),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn maps_dependency_types() {
+        assert_eq!(map_dependency_type("required"), "requiredDependency");
+        assert_eq!(map_dependency_type("optional"), "optionalDependency");
+        assert_eq!(map_dependency_type("incompatible"), "incompatible");
+        assert_eq!(map_dependency_type("embedded"), "embeddedLibrary");
+    }
+
+    #[test]
+    fn prefers_java_minecraft_version_types() {
+        let types = vec![
+            CfVersionType {
+                id: 1,
+                slug: "addons".to_string(),
+            },
+            CfVersionType {
+                id: 77784,
+                slug: "minecraft-1-21".to_string(),
+            },
+            CfVersionType {
+                id: 68441,
+                slug: "modloader".to_string(),
+            },
+        ];
+        let valid = allowed_type_ids(&types);
+        let catalog = vec![
+            CfGameVersion {
+                id: 999,
+                game_version_type_id: 1,
+                name: "1.21.4".to_string(),
+                slug: "1-21-4".to_string(),
+            },
+            CfGameVersion {
+                id: 11779,
+                game_version_type_id: 77784,
+                name: "1.21.4".to_string(),
+                slug: "1-21-4".to_string(),
+            },
+            CfGameVersion {
+                id: 7499,
+                game_version_type_id: 68441,
+                name: "Fabric".to_string(),
+                slug: "fabric".to_string(),
+            },
+        ];
+
+        let ids = resolve_version_ids(
+            &catalog,
+            &valid,
+            &["1.21.4".to_string()],
+            &["fabric".to_string()],
+        );
+        assert_eq!(ids, vec![11779, 7499]);
     }
 }

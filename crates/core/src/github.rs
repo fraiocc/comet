@@ -35,7 +35,7 @@ pub struct GitHubClient {
 impl GitHubClient {
     pub fn new(token: Option<String>) -> Self {
         Self {
-            http: reqwest::Client::new(),
+            http: crate::http::build_client(120),
             token,
         }
     }
@@ -94,10 +94,11 @@ impl GitHubClient {
     }
 
     pub async fn fetch_commit_changelog(&self, repo: &str, tag: &str) -> Option<String> {
-        if let Some(full_msg) = self.fetch_tag_commit_message(repo, tag).await
+        let tag_msg = self.fetch_tag_commit_message(repo, tag).await;
+        if let Some(full_msg) = &tag_msg
             && full_msg.lines().count() > 1
         {
-            return Some(full_msg);
+            return tag_msg;
         }
 
         let prev_tag = self.find_previous_tag(repo, tag).await;
@@ -126,7 +127,7 @@ impl GitHubClient {
             }
         }
 
-        self.fetch_tag_commit_message(repo, tag).await
+        tag_msg
     }
 
     async fn find_previous_tag(&self, repo: &str, current_tag: &str) -> Option<String> {
@@ -153,16 +154,7 @@ impl GitHubClient {
     }
 
     async fn get_release(&self, url: &str, repo: &str) -> Result<ReleaseInfo> {
-        let mut req = self
-            .http
-            .get(url)
-            .header(USER_AGENT, concat!("comet-cli/", env!("CARGO_PKG_VERSION")))
-            .header(ACCEPT, "application/vnd.github+json");
-        if let Some(token) = &self.token {
-            req = req.header(AUTHORIZATION, format!("Bearer {token}"));
-        }
-
-        let resp = req.send().await?;
+        let resp = self.authed_get(url).send().await?;
         let status = resp.status();
         if status.as_u16() == 404 {
             return Err(CometError::ReleaseNotFound {

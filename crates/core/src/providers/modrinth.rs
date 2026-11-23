@@ -23,7 +23,7 @@ impl Default for ModrinthPublisher {
 impl ModrinthPublisher {
     pub fn new() -> Self {
         Self {
-            http: reqwest::Client::new(),
+            http: crate::http::build_client(120),
         }
     }
 }
@@ -89,8 +89,14 @@ impl Publisher for ModrinthPublisher {
             })
             .collect();
 
+        let release_title = if req.release.name.trim().is_empty() {
+            &req.release.tag_name
+        } else {
+            &req.release.name
+        };
+
         let payload = ModrinthVersionPayload {
-            name: &req.release.name,
+            name: release_title,
             version_number: &req.version_number,
             changelog: &req.changelog,
             dependencies,

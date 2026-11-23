@@ -37,6 +37,11 @@ impl CliConfig {
         }
         let raw = toml::to_string_pretty(self).map_err(|e| CometError::Config(e.to_string()))?;
         fs::write(&path, raw)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = fs::set_permissions(&path, fs::Permissions::from_mode(0o600));
+        }
         Ok(())
     }
 

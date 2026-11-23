@@ -2,6 +2,7 @@ pub mod api;
 pub mod config;
 pub mod error;
 pub mod github;
+pub(crate) mod http;
 pub mod models;
 pub mod providers;
 

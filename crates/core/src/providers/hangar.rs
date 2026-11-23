@@ -25,7 +25,7 @@ impl Default for HangarPublisher {
 impl HangarPublisher {
     pub fn new() -> Self {
         Self {
-            http: reqwest::Client::new(),
+            http: crate::http::build_client(120),
         }
     }
 
