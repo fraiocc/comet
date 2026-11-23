@@ -51,7 +51,7 @@ impl GitHubClient {
     }
 
     pub async fn download_asset(&self, repo: &str, asset: &ReleaseAsset) -> Result<Vec<u8>> {
-        let req = if let Some(token) = &self.token {
+        let mut resp = if let Some(token) = &self.token {
             let api_url = format!(
                 "{GITHUB_API_BASE}/repos/{repo}/releases/assets/{}",
                 asset.id
@@ -61,14 +61,32 @@ impl GitHubClient {
                 .header(USER_AGENT, concat!("comet-cli/", env!("CARGO_PKG_VERSION")))
                 .header(ACCEPT, "application/octet-stream")
                 .header(AUTHORIZATION, format!("Bearer {token}"))
+                .send()
+                .await?
         } else {
             self.http
                 .get(&asset.browser_download_url)
                 .header(USER_AGENT, concat!("comet-cli/", env!("CARGO_PKG_VERSION")))
+                .send()
+                .await?
         };
 
-        let resp = req.send().await?;
+        if resp.status().as_u16() == 401 && self.token.is_some() {
+            resp = self
+                .http
+                .get(&asset.browser_download_url)
+                .header(USER_AGENT, concat!("comet-cli/", env!("CARGO_PKG_VERSION")))
+                .send()
+                .await?;
+        }
+
         let status = resp.status();
+        if status.as_u16() == 401 {
+            return Err(CometError::Api {
+                status: 401,
+                message: "GitHub token is expired or invalid — reconnect GitHub at https://comet.fraio.cc/dashboard".to_string(),
+            });
+        }
         if !status.is_success() {
             return Err(CometError::Api {
                 status: status.as_u16(),
@@ -80,7 +98,7 @@ impl GitHubClient {
 
     pub async fn fetch_tag_commit_message(&self, repo: &str, tag: &str) -> Option<String> {
         let commit_url = format!("{GITHUB_API_BASE}/repos/{repo}/commits/{tag}");
-        let resp = self.authed_get(&commit_url).send().await.ok()?;
+        let resp = self.send_get(&commit_url).await.ok()?;
         if !resp.status().is_success() {
             return None;
         }
@@ -105,7 +123,7 @@ impl GitHubClient {
 
         if let Some(prev) = prev_tag {
             let url = format!("{GITHUB_API_BASE}/repos/{repo}/compare/{prev}...{tag}");
-            if let Ok(resp) = self.authed_get(&url).send().await
+            if let Ok(resp) = self.send_get(&url).await
                 && resp.status().is_success()
                 && let Ok(compare) = resp.json::<GitHubCompareResponse>().await
                 && !compare.commits.is_empty()
@@ -132,7 +150,7 @@ impl GitHubClient {
 
     async fn find_previous_tag(&self, repo: &str, current_tag: &str) -> Option<String> {
         let url = format!("{GITHUB_API_BASE}/repos/{repo}/releases?per_page=10");
-        let resp = self.authed_get(&url).send().await.ok()?;
+        let resp = self.send_get(&url).await.ok()?;
         if !resp.status().is_success() {
             return None;
         }
@@ -153,9 +171,32 @@ impl GitHubClient {
         req
     }
 
-    async fn get_release(&self, url: &str, repo: &str) -> Result<ReleaseInfo> {
+    async fn send_get(&self, url: &str) -> Result<reqwest::Response> {
         let resp = self.authed_get(url).send().await?;
+        if resp.status().as_u16() == 401 && self.token.is_some() {
+            let anon = self
+                .http
+                .get(url)
+                .header(USER_AGENT, concat!("comet-cli/", env!("CARGO_PKG_VERSION")))
+                .header(ACCEPT, "application/vnd.github+json")
+                .send()
+                .await?;
+            if anon.status().is_success() {
+                return Ok(anon);
+            }
+        }
+        Ok(resp)
+    }
+
+    async fn get_release(&self, url: &str, repo: &str) -> Result<ReleaseInfo> {
+        let resp = self.send_get(url).await?;
         let status = resp.status();
+        if status.as_u16() == 401 {
+            return Err(CometError::Api {
+                status: 401,
+                message: "GitHub token is expired or invalid — reconnect GitHub at https://comet.fraio.cc/dashboard (or set GITHUB_TOKEN)".to_string(),
+            });
+        }
         if status.as_u16() == 404 {
             return Err(CometError::ReleaseNotFound {
                 repo: repo.to_string(),
