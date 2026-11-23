@@ -4,8 +4,10 @@ mod runner;
 
 use anyhow::{Context, Result, bail};
 use comet_core::github::{format_bytes, match_asset, normalize_version};
+use comet_core::inspect::{check_loader_compatibility, inspect_jar_bytes};
 use comet_core::{
-    CliConfig, CometClient, GitHubClient, PublishResultItem, TargetConfig, VersionType,
+    CliConfig, CometClient, GitHubClient, PublishResultItem, ReleaseAsset, ReleaseInfo,
+    TargetConfig, VersionType,
 };
 use serde::Serialize;
 
@@ -17,6 +19,7 @@ struct PublishJsonReport {
     repo: String,
     tag: String,
     asset: String,
+    sha256: Option<String>,
     dry_run: bool,
     total: usize,
     succeeded: usize,
@@ -75,40 +78,96 @@ pub async fn run(args: PublishArgs) -> Result<()> {
         .or(workspace.github_token);
     let gh = GitHubClient::new(gh_token);
 
-    if !quiet {
-        ui::print_step(&format!("Resolving release for {}", project.repo_full_name));
-    }
-    let pb = if quiet {
-        None
-    } else {
-        Some(ui::spinner("Querying GitHub Releases & commits..."))
-    };
-    let release = match args.tag.as_deref() {
-        Some(tag) => {
-            gh.fetch_release_by_tag(&project.repo_full_name, tag)
-                .await?
+    let (release, asset, local_bytes, commit_changelog) = if let Some(file_path) = &args.file {
+        let bytes = std::fs::read(file_path)
+            .with_context(|| format!("failed to read local artifact {}", file_path.display()))?;
+        let file_name = file_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("artifact.jar")
+            .to_string();
+        let meta = inspect_jar_bytes(&file_name, &bytes)?;
+        let tag = args
+            .tag
+            .clone()
+            .or_else(|| {
+                meta.version
+                    .as_ref()
+                    .map(|v| format!("v{}", normalize_version(v)))
+            })
+            .ok_or_else(|| {
+                anyhow::anyhow!("could not detect version from artifact; pass --tag <VERSION>")
+            })?;
+
+        let synthetic_asset = ReleaseAsset {
+            id: 0,
+            name: file_name.clone(),
+            size: bytes.len() as u64,
+            browser_download_url: file_path.display().to_string(),
+        };
+        let synthetic_release = ReleaseInfo {
+            tag_name: tag.clone(),
+            name: tag.clone(),
+            body: String::new(),
+            prerelease: tag.contains('-'),
+            draft: false,
+            html_url: format!("https://github.com/{}", project.repo_full_name),
+            assets: vec![synthetic_asset.clone()],
+        };
+
+        if !quiet {
+            ui::print_step(&format!("Using local artifact {}", file_path.display()));
+            ui::print_substep_ok(&format!(
+                "{}  ·  {} ({})",
+                synthetic_release.tag_name,
+                synthetic_asset.name,
+                format_bytes(synthetic_asset.size)
+            ));
+            ui::print_substep_info(&format!("SHA-256  {}", meta.sha256));
+            warn_loader_mismatches(&meta, &selected_targets);
+            println!();
         }
-        None => gh.fetch_latest_release(&project.repo_full_name).await?,
+
+        (synthetic_release, synthetic_asset, Some(bytes), None)
+    } else {
+        if !quiet {
+            ui::print_step(&format!("Resolving release for {}", project.repo_full_name));
+        }
+        let pb = if quiet {
+            None
+        } else {
+            Some(ui::spinner("Querying GitHub Releases & commits..."))
+        };
+        let release = match args.tag.as_deref() {
+            Some(tag) => {
+                gh.fetch_release_by_tag(&project.repo_full_name, tag)
+                    .await?
+            }
+            None => gh.fetch_latest_release(&project.repo_full_name).await?,
+        };
+        let commit_changelog = gh
+            .fetch_commit_changelog(&project.repo_full_name, &release.tag_name)
+            .await;
+        if let Some(bar) = pb {
+            bar.finish_and_clear();
+        }
+
+        let asset = match_asset(&release, &project.asset_pattern)
+            .with_context(|| format!("asset pattern '{}'", project.asset_pattern))?
+            .clone();
+
+        if !quiet {
+            ui::print_substep_ok(&format!(
+                "{}  ·  {} ({})",
+                release.tag_name,
+                asset.name,
+                format_bytes(asset.size)
+            ));
+            println!();
+        }
+
+        (release, asset, None, commit_changelog)
     };
-    let commit_changelog = gh
-        .fetch_commit_changelog(&project.repo_full_name, &release.tag_name)
-        .await;
-    if let Some(bar) = pb {
-        bar.finish_and_clear();
-    }
-
-    let asset = match_asset(&release, &project.asset_pattern)
-        .with_context(|| format!("asset pattern '{}'", project.asset_pattern))?;
-
-    if !quiet {
-        ui::print_substep_ok(&format!(
-            "{}  ·  {} ({})",
-            release.tag_name,
-            asset.name,
-            format_bytes(asset.size)
-        ));
-        println!();
-    }
 
     let (changelog_source, base_changelog) = prompts::select_changelog(
         &theme,
@@ -122,7 +181,7 @@ pub async fn run(args: PublishArgs) -> Result<()> {
         plan::print_release_plan(
             project,
             &release,
-            asset,
+            &asset,
             changelog_source,
             &base_changelog,
             &selected_targets,
@@ -132,10 +191,12 @@ pub async fn run(args: PublishArgs) -> Result<()> {
 
     if args.dry_run {
         if args.json {
+            let sha256 = local_bytes.as_deref().map(comet_core::inspect::sha256_hex);
             let report = PublishJsonReport {
                 repo: project.repo_full_name.clone(),
                 tag: release.tag_name.clone(),
                 asset: asset.name.clone(),
+                sha256,
                 dry_run: true,
                 total: selected_targets.len(),
                 succeeded: 0,
@@ -163,35 +224,42 @@ pub async fn run(args: PublishArgs) -> Result<()> {
         return Ok(());
     }
 
-    if !quiet {
-        ui::print_step(&format!("Downloading {}", asset.name));
-    }
-    let dl_bar = if quiet {
-        None
+    let asset_bytes = if let Some(bytes) = local_bytes {
+        bytes
     } else {
-        Some(ui::progress_bar(asset.size, "Fetching artifact"))
-    };
-    let asset_bytes = gh
-        .download_asset_with_progress(&project.repo_full_name, asset, |done, total| {
-            if let Some(bar) = &dl_bar {
-                if total > 0 && bar.length() != Some(total) {
-                    bar.set_length(total);
+        if !quiet {
+            ui::print_step(&format!("Downloading {}", asset.name));
+        }
+        let dl_bar = if quiet {
+            None
+        } else {
+            Some(ui::progress_bar(asset.size, "Fetching artifact"))
+        };
+        let bytes = gh
+            .download_asset_with_progress(&project.repo_full_name, &asset, |done, total| {
+                if let Some(bar) = &dl_bar {
+                    if total > 0 && bar.length() != Some(total) {
+                        bar.set_length(total);
+                    }
+                    bar.set_position(done);
                 }
-                bar.set_position(done);
+            })
+            .await?;
+        if let Some(bar) = dl_bar {
+            bar.finish_and_clear();
+        }
+        if !quiet {
+            ui::print_substep_ok(&format!("Downloaded {}", format_bytes(bytes.len() as u64)));
+            if let Ok(meta) = inspect_jar_bytes(&asset.name, &bytes) {
+                ui::print_substep_info(&format!("SHA-256  {}", meta.sha256));
+                warn_loader_mismatches(&meta, &selected_targets);
             }
-        })
-        .await?;
-    if let Some(bar) = dl_bar {
-        bar.finish_and_clear();
-    }
-    if !quiet {
-        ui::print_substep_ok(&format!(
-            "Downloaded {}",
-            format_bytes(asset_bytes.len() as u64)
-        ));
-        println!();
-    }
+            println!();
+        }
+        bytes
+    };
 
+    let sha256 = comet_core::inspect::sha256_hex(&asset_bytes);
     let version_number = normalize_version(&release.tag_name);
     let version_type = if release.prerelease {
         VersionType::Beta
@@ -221,6 +289,7 @@ pub async fn run(args: PublishArgs) -> Result<()> {
             repo: project.repo_full_name.clone(),
             tag: release.tag_name.clone(),
             asset: asset.name.clone(),
+            sha256: Some(sha256),
             dry_run: false,
             total: outcome.total,
             succeeded: outcome.succeeded,
@@ -248,4 +317,15 @@ pub async fn run(args: PublishArgs) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn warn_loader_mismatches(meta: &comet_core::inspect::ArtifactMetadata, targets: &[TargetConfig]) {
+    for target in targets {
+        if let Some(warning) = check_loader_compatibility(meta, &target.loaders) {
+            ui::print_substep_warn(&format!(
+                "{} ({}): {warning}",
+                target.kind, target.external_project_id
+            ));
+        }
+    }
 }

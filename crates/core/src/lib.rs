@@ -3,6 +3,7 @@ pub mod config;
 pub mod error;
 pub mod github;
 pub(crate) mod http;
+pub mod inspect;
 pub mod models;
 pub mod providers;
 pub mod retry;

@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Debug, Parser)]
@@ -32,6 +34,8 @@ pub enum Command {
     /// Publish a GitHub Release to configured targets
     #[command(alias = "p")]
     Publish(PublishArgs),
+    /// Inspect a local .jar artifact (loaders, version, dependencies, SHA-256)
+    Inspect(InspectArgs),
 }
 
 #[derive(Debug, Args, Default)]
@@ -49,6 +53,9 @@ pub struct PublishArgs {
     /// Specific release tag to publish (defaults to latest release)
     #[arg(short, long)]
     pub tag: Option<String>,
+    /// Publish a local artifact file directly instead of downloading from GitHub
+    #[arg(short, long)]
+    pub file: Option<PathBuf>,
     /// Preview publish targets without uploading
     #[arg(long)]
     pub dry_run: bool,
@@ -58,6 +65,15 @@ pub struct PublishArgs {
     /// Upload targets one by one instead of concurrently
     #[arg(long)]
     pub sequential: bool,
+    /// Emit machine-readable JSON output to stdout
+    #[arg(long)]
+    pub json: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct InspectArgs {
+    /// Path to the local .jar or release artifact
+    pub file: PathBuf,
     /// Emit machine-readable JSON output to stdout
     #[arg(long)]
     pub json: bool,
