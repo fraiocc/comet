@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 
-import { LayersIcon, TerminalIcon } from "@/components/ui/Icons";
+import { GlobeIcon, TerminalIcon } from "@/components/ui/Icons";
 
 export interface ChangelogRelease {
   id: string;
@@ -135,7 +135,7 @@ export function ChangelogFeed({ releases }: ChangelogFeedProps) {
                 id: "web" as const,
                 label: t("filterWeb"),
                 count: releases.filter((r) => r.product === "web").length,
-                icon: <LayersIcon className="h-4 w-4" />,
+                icon: <GlobeIcon className="h-4 w-4" />,
               },
             ]
           ).map((tab) => {
@@ -189,7 +189,7 @@ export function ChangelogFeed({ releases }: ChangelogFeedProps) {
                     {release.product === "cli" ? (
                       <TerminalIcon className="h-3.5 w-3.5 text-[#9cc4ff]" />
                     ) : (
-                      <LayersIcon className="h-3.5 w-3.5 text-[#9cc4ff]" />
+                      <GlobeIcon className="h-3.5 w-3.5 text-[#9cc4ff]" />
                     )}
                     <span>{release.product === "cli" ? t("filterCli") : t("filterWeb")}</span>
                   </span>

@@ -1,8 +1,8 @@
 import { notFound, redirect } from "next/navigation";
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 
-import { Navbar } from "@/components/Navbar";
 import { ProjectDetailClient } from "@/components/ProjectDetailClient";
+import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { db } from "@/db";
 import { projects, publishHistory, targets } from "@/db/schema";
 import { getSessionUser } from "@/lib/auth";
@@ -22,20 +22,23 @@ export default async function ProjectDetailPage({
   if (!isUuid(id)) {
     notFound();
   }
-  const [project] = await db
+
+  const userProjects = await db
     .select()
     .from(projects)
-    .where(and(eq(projects.id, id), eq(projects.userId, user.id)))
-    .limit(1);
+    .where(eq(projects.userId, user.id));
 
+  const project = userProjects.find((p) => p.id === id);
   if (!project) {
     notFound();
   }
 
-  const [projectTargets, historyRows] = await Promise.all([
+  const projectIds = userProjects.map((p) => p.id);
+  const [allUserTargets, historyRows] = await Promise.all([
     db
       .select({
         id: targets.id,
+        projectId: targets.projectId,
         kind: targets.kind,
         enabled: targets.enabled,
         externalProjectId: targets.externalProjectId,
@@ -46,7 +49,7 @@ export default async function ProjectDetailPage({
         descriptionOverride: targets.descriptionOverride,
       })
       .from(targets)
-      .where(eq(targets.projectId, project.id)),
+      .where(inArray(targets.projectId, projectIds)),
     db
       .select({
         id: publishHistory.id,
@@ -62,21 +65,43 @@ export default async function ProjectDetailPage({
       .limit(30),
   ]);
 
+  const projectTargets = allUserTargets
+    .filter((t) => t.projectId === project.id)
+    .map((t) => ({
+      id: t.id,
+      kind: t.kind,
+      enabled: t.enabled,
+      externalProjectId: t.externalProjectId,
+      gameVersions: t.gameVersions,
+      loaders: t.loaders,
+      dependencies: t.dependencies,
+      channel: t.channel,
+      descriptionOverride: t.descriptionOverride,
+    }));
+
+  const sidebarProjects = userProjects.map((p) => ({
+    id: p.id,
+    displayName: p.displayName,
+    repoFullName: p.repoFullName,
+    targetCount: allUserTargets.filter((t) => t.projectId === p.id && t.enabled).length,
+  }));
+
   const initialHistory = historyRows.map((row) => ({
     ...row,
     createdAt: row.createdAt.toISOString(),
   }));
 
   return (
-    <div className="min-h-screen overflow-x-clip">
-      <Navbar username={user.username} />
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-8 sm:py-12">
-        <ProjectDetailClient
-          project={project}
-          initialTargets={projectTargets}
-          initialHistory={initialHistory}
-        />
-      </main>
-    </div>
+    <WorkspaceShell
+      username={user.username}
+      githubUsername={user.githubUsername}
+      projects={sidebarProjects}
+    >
+      <ProjectDetailClient
+        project={project}
+        initialTargets={projectTargets}
+        initialHistory={initialHistory}
+      />
+    </WorkspaceShell>
   );
 }

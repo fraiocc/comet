@@ -510,18 +510,18 @@ export function ProjectDetailClient({
                           title={t("edit")}
                           aria-label={t("edit")}
                           onClick={() => setEditingTarget(target)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--muted)] transition-colors hover:bg-white/[0.06] hover:text-white cursor-pointer"
+                          className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--muted)] transition-colors hover:bg-white/[0.06] hover:text-white cursor-pointer"
                         >
-                          <PencilIcon className="h-4 w-4" />
+                          <PencilIcon className="h-[18px] w-[18px]" />
                         </button>
                         <button
                           type="button"
                           title={t("delete")}
                           aria-label={t("delete")}
                           onClick={() => setConfirmDeleteTarget(target)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--muted)] transition-colors hover:bg-rose-500/15 hover:text-[#fda4af] cursor-pointer"
+                          className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--muted)] transition-colors hover:bg-rose-500/15 hover:text-[#fda4af] cursor-pointer"
                         >
-                          <TrashIcon className="h-4 w-4" />
+                          <TrashIcon className="h-[18px] w-[18px]" />
                         </button>
                       </div>
                     </div>
@@ -840,7 +840,7 @@ export function ProjectDetailClient({
                 onClick={() => setDeleteModalOpen(true)}
                 className="mt-5"
               >
-                <TrashIcon className="h-4 w-4" />
+                <TrashIcon className="h-[18px] w-[18px]" />
                 {t("deleteProject")}
               </Button>
             </Surface>
@@ -901,7 +901,7 @@ export function ProjectDetailClient({
             variant="dangerSolid"
             onClick={handleConfirmDeleteTarget}
           >
-            <TrashIcon className="h-4 w-4" />
+            <TrashIcon className="h-[18px] w-[18px]" />
             {t("confirmDeleteTarget")}
           </Button>
         </div>
@@ -950,6 +950,7 @@ export function ProjectDetailClient({
         title={t("deleteProjectTitle")}
         subtitle={t("deleteProjectDesc")}
         size="md"
+        tone="danger"
       >
         <div className="flex items-center justify-end gap-2.5">
           <Button type="button" variant="ghost" onClick={() => setDeleteModalOpen(false)}>

@@ -224,7 +224,7 @@ export function CliTokensModal({ open, onClose }: CliTokensModalProps) {
                     onClick={() => handleRevoke(item.id)}
                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--muted)] transition-colors hover:bg-rose-500/15 hover:text-[#fda4af] disabled:opacity-40 cursor-pointer"
                   >
-                    <TrashIcon className="h-4 w-4" />
+                    <TrashIcon className="h-[18px] w-[18px]" />
                   </button>
                 </div>
               ))}
