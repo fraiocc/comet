@@ -46,7 +46,9 @@ async fn main() -> Result<()> {
             commands::targets::run().await
         }
         Some(Command::Publish(args)) => {
-            ui::print_compact_header();
+            if !args.json {
+                ui::print_compact_header();
+            }
             commands::publish::run(args).await
         }
         None => commands::interactive::run().await,

@@ -55,4 +55,10 @@ pub struct PublishArgs {
     /// Skip confirmation prompts (for CI / GitHub Actions)
     #[arg(short, long)]
     pub yes: bool,
+    /// Upload targets one by one instead of concurrently
+    #[arg(long)]
+    pub sequential: bool,
+    /// Emit machine-readable JSON output to stdout
+    #[arg(long)]
+    pub json: bool,
 }

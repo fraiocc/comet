@@ -5,6 +5,7 @@ pub mod github;
 pub(crate) mod http;
 pub mod models;
 pub mod providers;
+pub mod retry;
 
 pub use api::CometClient;
 pub use config::CliConfig;
@@ -17,3 +18,4 @@ pub use models::{
 pub use providers::{
     CurseForgePublisher, HangarPublisher, ModrinthPublisher, Publisher, PublisherRegistry,
 };
+pub use retry::{RetryPolicy, retry_async};

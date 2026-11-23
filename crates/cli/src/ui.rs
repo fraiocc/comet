@@ -97,6 +97,20 @@ pub fn spinner(message: &str) -> ProgressBar {
     pb
 }
 
+pub fn progress_bar(total_bytes: u64, message: &str) -> ProgressBar {
+    let pb = ProgressBar::new(total_bytes);
+    pb.set_style(
+        ProgressStyle::with_template(
+            "  {spinner:.111} {msg} [{bar:24.111/238}] {bytes}/{total_bytes} ({bytes_per_sec})",
+        )
+        .unwrap_or_else(|_| ProgressStyle::default_bar())
+        .progress_chars("━━─")
+        .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
+    );
+    pb.set_message(muted(message));
+    pb
+}
+
 pub fn print_box(title: &str, lines: &[String]) {
     let min_width = 58usize;
     let content_max = lines

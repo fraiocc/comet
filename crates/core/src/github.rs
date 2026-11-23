@@ -50,7 +50,46 @@ impl GitHubClient {
         self.get_release(&url, repo).await
     }
 
+    pub async fn fetch_releases(&self, repo: &str, limit: usize) -> Result<Vec<ReleaseInfo>> {
+        let per_page = limit.clamp(1, 30);
+        let url = format!("{GITHUB_API_BASE}/repos/{repo}/releases?per_page={per_page}");
+        let resp = self.send_get(&url).await?;
+        let status = resp.status();
+        if status.as_u16() == 401 {
+            return Err(CometError::Api {
+                status: 401,
+                message: "GitHub token is expired or invalid — reconnect GitHub at https://comet.fraio.cc/dashboard (or set GITHUB_TOKEN)".to_string(),
+            });
+        }
+        if status.as_u16() == 404 {
+            return Err(CometError::ReleaseNotFound {
+                repo: repo.to_string(),
+            });
+        }
+        if !status.is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            return Err(CometError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
+        }
+        Ok(resp.json::<Vec<ReleaseInfo>>().await?)
+    }
+
     pub async fn download_asset(&self, repo: &str, asset: &ReleaseAsset) -> Result<Vec<u8>> {
+        self.download_asset_with_progress(repo, asset, |_, _| {})
+            .await
+    }
+
+    pub async fn download_asset_with_progress<F>(
+        &self,
+        repo: &str,
+        asset: &ReleaseAsset,
+        mut on_progress: F,
+    ) -> Result<Vec<u8>>
+    where
+        F: FnMut(u64, u64),
+    {
         let mut resp = if let Some(token) = &self.token {
             let api_url = format!(
                 "{GITHUB_API_BASE}/repos/{repo}/releases/assets/{}",
@@ -93,7 +132,16 @@ impl GitHubClient {
                 message: format!("failed to download asset {}", asset.name),
             });
         }
-        Ok(resp.bytes().await?.to_vec())
+
+        let total = resp.content_length().unwrap_or(asset.size);
+        let mut buf = Vec::with_capacity(total.min(64 * 1024 * 1024) as usize);
+        let mut downloaded = 0u64;
+        while let Some(chunk) = resp.chunk().await? {
+            buf.extend_from_slice(&chunk);
+            downloaded += chunk.len() as u64;
+            on_progress(downloaded, total);
+        }
+        Ok(buf)
     }
 
     pub async fn fetch_tag_commit_message(&self, repo: &str, tag: &str) -> Option<String> {
