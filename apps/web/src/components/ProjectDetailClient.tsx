@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { TargetCreateModal } from "@/components/TargetCreateModal";
@@ -63,6 +63,19 @@ interface ProjectDetailClientProps {
 
 type ProjectTab = "targets" | "releases" | "history" | "settings";
 
+interface PendingTargetDelete {
+  target: TargetSummary;
+  index: number;
+  remainingMs: number;
+}
+
+const TARGET_UNDO_MS = 3000;
+
+function formatTargetKind(kind: string): string {
+  if (kind === "curseforge") return "CurseForge";
+  return kind.charAt(0).toUpperCase() + kind.slice(1);
+}
+
 function formatDateTime(iso: string): string {
   try {
     return new Intl.DateTimeFormat("en-US", {
@@ -95,9 +108,14 @@ export function ProjectDetailClient({
   const [targetList, setTargetList] = useState<TargetSummary[]>(initialTargets);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editingTarget, setEditingTarget] = useState<TargetSummary | null>(null);
-  const [deletingTargetId, setDeletingTargetId] = useState<string | null>(null);
+  const [confirmDeleteTarget, setConfirmDeleteTarget] = useState<TargetSummary | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingTargetDelete | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingProject, setDeletingProject] = useState(false);
+
+  const pendingDeleteRef = useRef<PendingTargetDelete | null>(null);
+  const deleteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [savingSettings, setSavingSettings] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -177,22 +195,117 @@ export function ProjectDetailClient({
     }
   }
 
-  async function handleDeleteTarget(targetId: string) {
+  const clearDeleteTimers = useCallback(() => {
+    if (deleteTimeoutRef.current) {
+      clearTimeout(deleteTimeoutRef.current);
+      deleteTimeoutRef.current = null;
+    }
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+  }, []);
+
+  const commitTargetDelete = useCallback(
+    async (entry: PendingTargetDelete, keepalive = false) => {
+      try {
+        const resp = await fetch(
+          `/api/projects/${project.id}/targets/${entry.target.id}`,
+          { method: "DELETE", keepalive },
+        );
+        if (!resp.ok && !keepalive) {
+          setErrorMessage("Failed to delete target");
+          setTargetList((prev) => {
+            if (prev.some((item) => item.id === entry.target.id)) return prev;
+            const next = [...prev];
+            next.splice(Math.min(entry.index, next.length), 0, entry.target);
+            return next;
+          });
+        }
+      } catch {
+        if (!keepalive) {
+          setErrorMessage("Failed to delete target");
+          setTargetList((prev) => {
+            if (prev.some((item) => item.id === entry.target.id)) return prev;
+            const next = [...prev];
+            next.splice(Math.min(entry.index, next.length), 0, entry.target);
+            return next;
+          });
+        }
+      }
+    },
+    [project.id],
+  );
+
+  useEffect(() => {
+    return () => {
+      clearDeleteTimers();
+      const pending = pendingDeleteRef.current;
+      if (pending) {
+        pendingDeleteRef.current = null;
+        void commitTargetDelete(pending, true);
+      }
+    };
+  }, [clearDeleteTimers, commitTargetDelete]);
+
+  function handleConfirmDeleteTarget() {
+    if (!confirmDeleteTarget) return;
+    const targetToDelete = confirmDeleteTarget;
+    setConfirmDeleteTarget(null);
     setStatusMessage(null);
     setErrorMessage(null);
-    setDeletingTargetId(targetId);
-    try {
-      const resp = await fetch(`/api/projects/${project.id}/targets/${targetId}`, {
-        method: "DELETE",
-      });
-      if (!resp.ok) {
-        setErrorMessage("Failed to delete target");
-        return;
-      }
-      setTargetList((prev) => prev.filter((item) => item.id !== targetId));
-    } finally {
-      setDeletingTargetId(null);
+
+    if (pendingDeleteRef.current) {
+      const previous = pendingDeleteRef.current;
+      clearDeleteTimers();
+      pendingDeleteRef.current = null;
+      setPendingDelete(null);
+      void commitTargetDelete(previous);
     }
+
+    const index = targetList.findIndex((item) => item.id === targetToDelete.id);
+    if (index === -1) return;
+
+    setTargetList((prev) => prev.filter((item) => item.id !== targetToDelete.id));
+
+    const entry: PendingTargetDelete = {
+      target: targetToDelete,
+      index,
+      remainingMs: TARGET_UNDO_MS,
+    };
+    pendingDeleteRef.current = entry;
+    setPendingDelete(entry);
+
+    const startedAt = Date.now();
+    countdownIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      const remainingMs = Math.max(0, TARGET_UNDO_MS - elapsed);
+      setPendingDelete((prev) => (prev ? { ...prev, remainingMs } : null));
+    }, 50);
+
+    deleteTimeoutRef.current = setTimeout(() => {
+      clearDeleteTimers();
+      const active = pendingDeleteRef.current;
+      pendingDeleteRef.current = null;
+      setPendingDelete(null);
+      if (active) {
+        void commitTargetDelete(active);
+      }
+    }, TARGET_UNDO_MS);
+  }
+
+  function handleUndoDeleteTarget() {
+    const active = pendingDeleteRef.current;
+    if (!active) return;
+    clearDeleteTimers();
+    pendingDeleteRef.current = null;
+    setPendingDelete(null);
+    setTargetList((prev) => {
+      if (prev.some((item) => item.id === active.target.id)) return prev;
+      const next = [...prev];
+      next.splice(Math.min(active.index, next.length), 0, active.target);
+      return next;
+    });
   }
 
   async function handleDeleteProject() {
@@ -405,9 +518,8 @@ export function ProjectDetailClient({
                           type="button"
                           title={t("delete")}
                           aria-label={t("delete")}
-                          disabled={deletingTargetId === target.id}
-                          onClick={() => handleDeleteTarget(target.id)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--muted)] transition-colors hover:bg-rose-500/15 hover:text-[#fda4af] disabled:opacity-40 cursor-pointer"
+                          onClick={() => setConfirmDeleteTarget(target)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--muted)] transition-colors hover:bg-rose-500/15 hover:text-[#fda4af] cursor-pointer"
                         >
                           <TrashIcon className="h-4 w-4" />
                         </button>
@@ -758,6 +870,78 @@ export function ProjectDetailClient({
             )
           }
         />
+      )}
+
+      <Modal
+        open={Boolean(confirmDeleteTarget)}
+        onClose={() => setConfirmDeleteTarget(null)}
+        title={
+          confirmDeleteTarget
+            ? t("deleteTargetTitle", { kind: formatTargetKind(confirmDeleteTarget.kind) })
+            : ""
+        }
+        subtitle={
+          confirmDeleteTarget
+            ? t("deleteTargetDesc", { externalId: confirmDeleteTarget.externalProjectId })
+            : undefined
+        }
+        size="md"
+        tone="danger"
+      >
+        <div className="flex items-center justify-end gap-2.5">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setConfirmDeleteTarget(null)}
+          >
+            {t("cancel")}
+          </Button>
+          <Button
+            type="button"
+            variant="dangerSolid"
+            onClick={handleConfirmDeleteTarget}
+          >
+            <TrashIcon className="h-4 w-4" />
+            {t("confirmDeleteTarget")}
+          </Button>
+        </div>
+      </Modal>
+
+      {pendingDelete && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="animate-fade-up fixed bottom-5 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 overflow-hidden rounded-2xl bg-[#240d13] shadow-[0_20px_60px_rgba(0,0,0,0.7)] ring-1 ring-inset ring-rose-500/30"
+        >
+          <div className="flex items-center justify-between gap-3 px-4 py-3.5">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-white">
+                {t("targetDeletedToast", {
+                  kind: formatTargetKind(pendingDelete.target.kind),
+                })}
+              </p>
+              <p className="mt-0.5 truncate font-mono text-xs text-rose-200/75">
+                {pendingDelete.target.externalProjectId} &middot;{" "}
+                {Math.max(1, Math.ceil(pendingDelete.remainingMs / 1000))}s
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleUndoDeleteTarget}
+              className="shrink-0 bg-white/10 text-white hover:bg-white/20"
+            >
+              {t("undo")}
+            </Button>
+          </div>
+          <div className="h-1 w-full bg-rose-950/80">
+            <div
+              className="h-full bg-[#e13b56] transition-[width] duration-75 ease-linear"
+              style={{ width: `${(pendingDelete.remainingMs / TARGET_UNDO_MS) * 100}%` }}
+            />
+          </div>
+        </div>
       )}
 
       <Modal

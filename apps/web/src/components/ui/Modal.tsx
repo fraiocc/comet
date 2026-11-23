@@ -9,6 +9,7 @@ interface ModalProps {
   title: string;
   subtitle?: string;
   size?: "md" | "lg" | "xl";
+  tone?: "default" | "danger";
   children: ReactNode;
 }
 
@@ -18,6 +19,7 @@ export function Modal({
   title,
   subtitle,
   size = "lg",
+  tone = "default",
   children,
 }: ModalProps) {
   useEffect(() => {
@@ -38,16 +40,23 @@ export function Modal({
   const widthClass =
     size === "xl" ? "max-w-5xl" : size === "lg" ? "max-w-2xl" : "max-w-lg";
 
+  const isDanger = tone === "danger";
+  const backdropClass = isDanger ? "bg-[#1a050a]/80" : "bg-black/75";
+  const panelClass = isDanger
+    ? "bg-[#290e15] ring-rose-500/30"
+    : "bg-[var(--surface)] ring-white/[0.07]";
+  const dividerClass = isDanger ? "bg-rose-400/15" : "bg-white/[0.05]";
+
   return (
     <div
-      className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md sm:p-6"
+      className={`animate-fade-in fixed inset-0 z-50 flex items-center justify-center ${backdropClass} p-4 backdrop-blur-md sm:p-6`}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
     >
       <div
-        className={`animate-modal-in flex w-full ${widthClass} max-h-[92vh] flex-col overflow-hidden rounded-[24px] bg-[var(--surface)] shadow-[0_32px_96px_rgba(0,0,0,0.78)] ring-1 ring-inset ring-white/[0.07] sm:max-h-[88vh] sm:rounded-[28px]`}
+        className={`animate-modal-in flex w-full ${widthClass} max-h-[92vh] flex-col overflow-hidden rounded-[24px] ${panelClass} shadow-[0_32px_96px_rgba(0,0,0,0.78)] ring-1 ring-inset sm:max-h-[88vh] sm:rounded-[28px]`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-start justify-between gap-4 px-5 pb-4 pt-5 sm:gap-6 sm:px-9 sm:pb-5 sm:pt-8">
@@ -82,7 +91,7 @@ export function Modal({
           </button>
         </div>
 
-        <div className="mx-5 h-px shrink-0 bg-white/[0.05] sm:mx-9" />
+        <div className={`mx-5 h-px shrink-0 ${dividerClass} sm:mx-9`} />
 
         <div className="overflow-y-auto px-5 py-5 sm:px-9 sm:py-7">{children}</div>
       </div>
