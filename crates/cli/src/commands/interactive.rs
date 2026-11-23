@@ -5,60 +5,69 @@ use dialoguer::Input;
 use crate::commands::{doctor, init, login, logout, publish, status, targets};
 use crate::ui;
 
+const SIGNED_IN_QUICK: [(&str, &str, &str); 4] = [
+    ("1", "publish", "Publish a GitHub Release"),
+    ("2", "dry-run", "Preview release without uploading"),
+    ("3", "targets", "Enable or disable project targets"),
+    ("4", "status", "Workspace account and projects"),
+];
+
+const SIGNED_OUT_QUICK: [(&str, &str, &str); 2] = [
+    ("1", "account", "Sign in to your Comet workspace"),
+    ("2", "doctor", "Run configuration diagnostics"),
+];
+
+fn print_quick_access(signed_in: bool) {
+    let items: &[(&str, &str, &str)] = if signed_in {
+        &SIGNED_IN_QUICK
+    } else {
+        &SIGNED_OUT_QUICK
+    };
+
+    println!("  {}", ui::starlight_bold("Quick access"));
+    for (num, cmd, desc) in items {
+        let padded = format!("{cmd:<9}");
+        println!(
+            "  {}  {} {}",
+            ui::sky_bold(num),
+            ui::starlight(&padded),
+            ui::muted(desc)
+        );
+    }
+    println!(
+        "  {}",
+        ui::muted("Type a number or command · help for all · exit to quit")
+    );
+    println!();
+}
+
 fn print_help() {
-    let lines = vec![
-        format!(
-            "{}  {}",
-            ui::sky("publish "),
-            ui::muted("Publish a GitHub Release to configured targets")
-        ),
-        format!(
-            "{}  {}",
-            ui::sky("dry-run "),
-            ui::muted("Preview release plan without uploading")
-        ),
-        format!(
-            "{}  {}",
-            ui::sky("targets "),
-            ui::muted("Enable or disable targets for a project")
-        ),
-        format!(
-            "{}  {}",
-            ui::sky("init    "),
-            ui::muted("Register the current GitHub repository in Comet")
-        ),
-        format!(
-            "{}  {}",
-            ui::sky("status  "),
-            ui::muted("Show workspace account and configured projects")
-        ),
-        format!(
-            "{}  {}",
-            ui::sky("doctor  "),
-            ui::muted("Run configuration and connection diagnostics")
-        ),
-        format!(
-            "{}  {}",
-            ui::sky("account "),
-            ui::muted("Sign in or switch your Comet account")
-        ),
-        format!(
-            "{}  {}",
-            ui::sky("logout  "),
-            ui::muted("Clear the saved CLI token")
-        ),
-        format!(
-            "{}  {}",
-            ui::sky("clear   "),
-            ui::muted("Clear the terminal screen")
-        ),
-        format!(
-            "{}  {}",
-            ui::sky("help    "),
-            ui::muted("Show this command list")
-        ),
-        format!("{}  {}", ui::sky("exit    "), ui::muted("Exit Comet CLI")),
+    let entries = [
+        ("publish", "1, p", "Publish a GitHub Release to targets"),
+        ("dry-run", "2, d", "Preview release plan without uploading"),
+        ("targets", "3, t", "Enable or disable targets for a project"),
+        ("status", "4, s", "Show account and configured projects"),
+        ("init", "i", "Register current GitHub repo in Comet"),
+        ("doctor", "", "Run configuration & connection checks"),
+        ("account", "login", "Sign in or switch your Comet account"),
+        ("logout", "", "Clear the saved CLI token"),
+        ("clear", "cls", "Clear the terminal screen"),
+        ("help", "h, ?", "Show this command list"),
+        ("exit", "q", "Exit Comet CLI"),
     ];
+    let lines: Vec<String> = entries
+        .iter()
+        .map(|(cmd, alias, desc)| {
+            let cmd_col = format!("{cmd:<8}");
+            let alias_col = format!("{alias:<6}");
+            format!(
+                "{} {} {}",
+                ui::sky(&cmd_col),
+                ui::border(&alias_col),
+                ui::muted(desc)
+            )
+        })
+        .collect();
     ui::print_box(&ui::starlight_bold("Commands"), &lines);
 }
 
@@ -70,6 +79,8 @@ pub async fn run() -> Result<()> {
         let config = CliConfig::load().unwrap_or_default();
         let api_url = config.resolve_api_url();
         let token = config.resolve_token().ok();
+
+        let signed_in = token.is_some();
 
         if first_render {
             first_render = false;
@@ -87,20 +98,7 @@ pub async fn run() -> Result<()> {
                 None => (None, None),
             };
             ui::print_welcome(account.as_deref(), &api_url, project_count);
-            if token.is_some() {
-                println!(
-                    "  {}",
-                    ui::muted(
-                        "Commands: publish · dry-run · targets · init · status · doctor · help · exit"
-                    )
-                );
-            } else {
-                println!(
-                    "  {}",
-                    ui::muted("Type 'account' to sign in, 'help' for commands, or 'exit' to quit.")
-                );
-            }
-            println!();
+            print_quick_access(signed_in);
         }
 
         let input: String = match Input::with_theme(&theme)
@@ -118,9 +116,18 @@ pub async fn run() -> Result<()> {
         }
 
         let cmd = raw.split_whitespace().next().unwrap_or("").to_lowercase();
+        let resolved = match (signed_in, cmd.as_str()) {
+            (true, "1") => "publish",
+            (true, "2") => "dry-run",
+            (true, "3") => "targets",
+            (true, "4") => "status",
+            (false, "1") => "account",
+            (false, "2") => "doctor",
+            (_, other) => other,
+        };
         println!();
 
-        let result = match cmd.as_str() {
+        let result = match resolved {
             "exit" | "quit" | "q" => break,
             "help" | "h" | "?" => {
                 print_help();

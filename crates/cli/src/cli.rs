@@ -19,14 +19,18 @@ pub enum Command {
     /// Clear the saved CLI token
     Logout,
     /// Register the current GitHub repository in Comet
+    #[command(alias = "i")]
     Init,
     /// Show current account and configured projects
+    #[command(alias = "s")]
     Status,
     /// Check CLI configuration, authentication, and local repository
     Doctor,
     /// Enable or disable publishing targets for a project
+    #[command(alias = "t")]
     Targets,
     /// Publish a GitHub Release to configured targets
+    #[command(alias = "p")]
     Publish(PublishArgs),
 }
 
