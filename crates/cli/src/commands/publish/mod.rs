@@ -169,13 +169,27 @@ pub async fn run(args: PublishArgs) -> Result<()> {
         (release, asset, None, commit_changelog)
     };
 
-    let (changelog_source, base_changelog) = prompts::select_changelog(
-        &theme,
-        non_interactive,
-        commit_changelog.as_deref(),
-        &release.body,
-        project.default_changelog.as_deref(),
-    )?;
+    let auto_changelog = if args.auto_changelog {
+        let from = crate::git::latest_tag();
+        crate::git::read_commits(from.as_deref(), "HEAD", 100)
+            .ok()
+            .map(|commits| comet_core::changelog::render_markdown(&commits, None, false))
+            .filter(|md| !md.trim().is_empty())
+    } else {
+        None
+    };
+
+    let (changelog_source, base_changelog) = if let Some(generated) = auto_changelog {
+        ("auto-git", generated)
+    } else {
+        prompts::select_changelog(
+            &theme,
+            non_interactive,
+            commit_changelog.as_deref(),
+            &release.body,
+            project.default_changelog.as_deref(),
+        )?
+    };
 
     if !quiet {
         plan::print_release_plan(

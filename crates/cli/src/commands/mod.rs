@@ -1,3 +1,4 @@
+pub mod changelog;
 pub mod doctor;
 pub mod init;
 pub mod inspect;

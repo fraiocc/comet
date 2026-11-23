@@ -57,6 +57,12 @@ async fn main() -> Result<()> {
             }
             commands::inspect::run(args)
         }
+        Some(Command::Changelog(args)) => {
+            if args.output.is_some() {
+                ui::print_compact_header();
+            }
+            commands::changelog::run(args)
+        }
         None => commands::interactive::run().await,
     }
 }

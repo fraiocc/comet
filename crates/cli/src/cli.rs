@@ -36,6 +36,9 @@ pub enum Command {
     Publish(PublishArgs),
     /// Inspect a local .jar artifact (loaders, version, dependencies, SHA-256)
     Inspect(InspectArgs),
+    /// Generate categorized Markdown release notes from local Git commits
+    #[command(alias = "cl")]
+    Changelog(ChangelogArgs),
 }
 
 #[derive(Debug, Args, Default)]
@@ -62,6 +65,9 @@ pub struct PublishArgs {
     /// Skip confirmation prompts (for CI / GitHub Actions)
     #[arg(short, long)]
     pub yes: bool,
+    /// Generate release notes automatically from local Git commits
+    #[arg(long)]
+    pub auto_changelog: bool,
     /// Upload targets one by one instead of concurrently
     #[arg(long)]
     pub sequential: bool,
@@ -77,4 +83,26 @@ pub struct InspectArgs {
     /// Emit machine-readable JSON output to stdout
     #[arg(long)]
     pub json: bool,
+}
+
+#[derive(Debug, Args, Default)]
+pub struct ChangelogArgs {
+    /// Starting Git ref or tag (defaults to latest tag)
+    #[arg(long)]
+    pub from: Option<String>,
+    /// Ending Git ref (defaults to HEAD)
+    #[arg(long)]
+    pub to: Option<String>,
+    /// Optional Markdown heading (e.g. v1.2.0)
+    #[arg(long)]
+    pub title: Option<String>,
+    /// Write generated Markdown to a file instead of stdout
+    #[arg(short, long)]
+    pub output: Option<PathBuf>,
+    /// Include chore/ci/build/merge commits
+    #[arg(long)]
+    pub all: bool,
+    /// Maximum number of commits to inspect
+    #[arg(long, default_value_t = 100)]
+    pub limit: usize,
 }
