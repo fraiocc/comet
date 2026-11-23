@@ -185,6 +185,14 @@ async fn execute_parallel(ctx: ExecutionContext<'_>) -> Result<ExecutionOutcome>
     }
 
     if !history_results.is_empty() {
+        let _ = comet_core::history::LocalHistoryStore::append(
+            comet_core::history::LocalPublishRecord::now(
+                &ctx.project.repo_full_name,
+                &ctx.release.tag_name,
+                ctx.asset_name,
+                history_results.clone(),
+            ),
+        );
         record_history(
             ctx.client,
             &ctx.project.id,
@@ -337,6 +345,14 @@ async fn execute_sequential(ctx: ExecutionContext<'_>) -> Result<ExecutionOutcom
     }
 
     if !history_results.is_empty() {
+        let _ = comet_core::history::LocalHistoryStore::append(
+            comet_core::history::LocalPublishRecord::now(
+                &ctx.project.repo_full_name,
+                &ctx.release.tag_name,
+                ctx.asset_name,
+                history_results.clone(),
+            ),
+        );
         record_history(
             ctx.client,
             &ctx.project.id,

@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
+use clap_complete::Shell;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -39,6 +40,17 @@ pub enum Command {
     /// Generate categorized Markdown release notes from local Git commits
     #[command(alias = "cl")]
     Changelog(ChangelogArgs),
+    /// List recent GitHub Releases and assets for a repository
+    #[command(alias = "rel")]
+    Releases(ReleasesArgs),
+    /// Show recent local publish history (~/.comet/history.json)
+    #[command(alias = "hist")]
+    History(HistoryArgs),
+    /// Validate targets, platform tokens, and release asset matching
+    #[command(alias = "val")]
+    Validate(ValidateArgs),
+    /// Generate shell completion scripts (powershell, bash, zsh, fish)
+    Completions(CompletionsArgs),
 }
 
 #[derive(Debug, Args, Default)]
@@ -105,4 +117,43 @@ pub struct ChangelogArgs {
     /// Maximum number of commits to inspect
     #[arg(long, default_value_t = 100)]
     pub limit: usize,
+}
+
+#[derive(Debug, Args, Default)]
+pub struct ReleasesArgs {
+    /// Repository in owner/name format (auto-detected from git remote)
+    #[arg(short, long)]
+    pub repo: Option<String>,
+    /// Number of releases to display
+    #[arg(short, long, default_value_t = 10)]
+    pub limit: usize,
+    /// Emit machine-readable JSON output to stdout
+    #[arg(long)]
+    pub json: bool,
+}
+
+#[derive(Debug, Args, Default)]
+pub struct HistoryArgs {
+    /// Filter history by repository name
+    #[arg(short, long)]
+    pub repo: Option<String>,
+    /// Maximum entries to display
+    #[arg(short, long, default_value_t = 15)]
+    pub limit: usize,
+    /// Emit machine-readable JSON output to stdout
+    #[arg(long)]
+    pub json: bool,
+}
+
+#[derive(Debug, Args, Default)]
+pub struct ValidateArgs {
+    /// Repository in owner/name format (defaults to local repo or all projects)
+    #[arg(short, long)]
+    pub repo: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct CompletionsArgs {
+    /// Target shell to generate completion script for
+    pub shell: Shell,
 }

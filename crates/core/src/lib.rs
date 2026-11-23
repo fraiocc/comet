@@ -3,6 +3,7 @@ pub mod changelog;
 pub mod config;
 pub mod error;
 pub mod github;
+pub mod history;
 pub(crate) mod http;
 pub mod inspect;
 pub mod models;

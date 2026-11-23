@@ -63,6 +63,23 @@ async fn main() -> Result<()> {
             }
             commands::changelog::run(args)
         }
+        Some(Command::Releases(args)) => {
+            if !args.json {
+                ui::print_compact_header();
+            }
+            commands::releases::run(args).await
+        }
+        Some(Command::History(args)) => {
+            if !args.json {
+                ui::print_compact_header();
+            }
+            commands::history::run(args)
+        }
+        Some(Command::Validate(args)) => {
+            ui::print_compact_header();
+            commands::validate::run(args).await
+        }
+        Some(Command::Completions(args)) => commands::completions::run(args),
         None => commands::interactive::run().await,
     }
 }

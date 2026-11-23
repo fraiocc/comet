@@ -1,10 +1,14 @@
 pub mod changelog;
+pub mod completions;
 pub mod doctor;
+pub mod history;
 pub mod init;
 pub mod inspect;
 pub mod interactive;
 pub mod login;
 pub mod logout;
 pub mod publish;
+pub mod releases;
 pub mod status;
 pub mod targets;
+pub mod validate;

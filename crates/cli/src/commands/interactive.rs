@@ -2,7 +2,10 @@ use anyhow::Result;
 use comet_core::{CliConfig, CometClient};
 use dialoguer::Input;
 
-use crate::commands::{doctor, init, login, logout, publish, status, targets};
+use crate::commands::{
+    changelog, doctor, history, init, inspect, login, logout, publish, releases, status, targets,
+    validate,
+};
 use crate::ui;
 
 const SIGNED_IN_QUICK: [(&str, &str, &str); 4] = [
@@ -47,6 +50,11 @@ fn print_help() {
         ("dry-run", "2, d", "Preview release plan without uploading"),
         ("targets", "3, t", "Enable or disable targets for a project"),
         ("status", "4, s", "Show account and configured projects"),
+        ("releases", "rel", "List recent GitHub Releases & assets"),
+        ("history", "hist", "Show local publish history"),
+        ("validate", "val", "Verify targets, tokens & asset match"),
+        ("changelog", "cl", "Generate release notes from Git commits"),
+        ("inspect", "", "Inspect a local .jar (inspect <file>)"),
         ("init", "i", "Register current GitHub repo in Comet"),
         ("doctor", "", "Run configuration & connection checks"),
         ("account", "login", "Sign in or switch your Comet account"),
@@ -58,7 +66,7 @@ fn print_help() {
     let lines: Vec<String> = entries
         .iter()
         .map(|(cmd, alias, desc)| {
-            let cmd_col = format!("{cmd:<8}");
+            let cmd_col = format!("{cmd:<10}");
             let alias_col = format!("{alias:<6}");
             format!(
                 "{} {} {}",
@@ -115,7 +123,9 @@ pub async fn run() -> Result<()> {
             continue;
         }
 
-        let cmd = raw.split_whitespace().next().unwrap_or("").to_lowercase();
+        let mut parts = raw.split_whitespace();
+        let cmd = parts.next().unwrap_or("").to_lowercase();
+        let rest_arg = parts.next();
         let resolved = match (signed_in, cmd.as_str()) {
             (true, "1") => "publish",
             (true, "2") => "dry-run",
@@ -161,6 +171,32 @@ pub async fn run() -> Result<()> {
                 .await
             }
             "targets" | "t" => targets::run().await,
+            "releases" | "rel" => {
+                releases::run(crate::cli::ReleasesArgs {
+                    limit: 10,
+                    ..Default::default()
+                })
+                .await
+            }
+            "history" | "hist" => history::run(crate::cli::HistoryArgs {
+                limit: 15,
+                ..Default::default()
+            }),
+            "validate" | "val" => validate::run(Default::default()).await,
+            "changelog" | "cl" => changelog::run(crate::cli::ChangelogArgs {
+                limit: 100,
+                ..Default::default()
+            }),
+            "inspect" => match rest_arg {
+                Some(path) => inspect::run(crate::cli::InspectArgs {
+                    file: std::path::PathBuf::from(path),
+                    json: false,
+                }),
+                None => {
+                    ui::print_warn("Usage: inspect <path-to-file.jar>");
+                    Ok(())
+                }
+            },
             "init" | "i" => {
                 let res = init::run().await;
                 if res.is_ok() {
