@@ -253,10 +253,8 @@ fn parse_simple_yaml(
                     }
                 }
             }
-            "folia-supported" => {
-                if clean_scalar(val).eq_ignore_ascii_case("true") {
-                    loaders.insert("folia".to_string());
-                }
+            "folia-supported" if clean_scalar(val).eq_ignore_ascii_case("true") => {
+                loaders.insert("folia".to_string());
             }
             _ => {}
         }

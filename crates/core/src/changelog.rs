@@ -118,11 +118,8 @@ pub fn render_markdown(
             CommitKind::Perf => perf.push(parsed),
             CommitKind::Refactor => refactors.push(parsed),
             CommitKind::Docs => docs.push(parsed),
-            CommitKind::Chore => {
-                if include_chores {
-                    others.push(parsed);
-                }
-            }
+            CommitKind::Chore if include_chores => others.push(parsed),
+            CommitKind::Chore => {}
             CommitKind::Other => others.push(parsed),
         }
     }
