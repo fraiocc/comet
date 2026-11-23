@@ -1,3 +1,4 @@
+pub mod doctor;
 pub mod interactive;
 pub mod login;
 pub mod logout;

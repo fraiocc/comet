@@ -1,5 +1,6 @@
 mod cli;
 mod commands;
+mod git;
 mod ui;
 mod updater;
 
@@ -31,6 +32,10 @@ async fn main() -> Result<()> {
         Some(Command::Status) => {
             ui::print_compact_header();
             commands::status::run().await
+        }
+        Some(Command::Doctor) => {
+            ui::print_compact_header();
+            commands::doctor::run().await
         }
         Some(Command::Targets) => {
             ui::print_compact_header();

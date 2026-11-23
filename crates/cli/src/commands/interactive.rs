@@ -2,7 +2,7 @@ use anyhow::Result;
 use comet_core::{CliConfig, CometClient};
 use dialoguer::Select;
 
-use crate::commands::{login, logout, publish, status, targets};
+use crate::commands::{doctor, login, logout, publish, status, targets};
 use crate::ui;
 
 pub async fn run() -> Result<()> {
@@ -60,6 +60,7 @@ pub async fn run() -> Result<()> {
             "Dry run (preview only)",
             "Toggle targets (enable / disable)",
             "Workspace status",
+            "Run diagnostics (doctor)",
             "Switch account / login",
             "Logout",
             "Exit",
@@ -83,14 +84,15 @@ pub async fn run() -> Result<()> {
             }
             2 => targets::run().await,
             3 => status::run().await,
-            4 => {
+            4 => doctor::run().await,
+            5 => {
                 let res = login::run(Default::default()).await;
                 if res.is_ok() {
                     first_render = true;
                 }
                 res
             }
-            5 => {
+            6 => {
                 let res = logout::run();
                 if res.is_ok() {
                     first_render = true;

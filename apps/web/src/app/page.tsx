@@ -114,9 +114,13 @@ export default async function HomePage() {
                 <span className="font-medium text-white">{t("platform2Title")}</span>
                 <span className="font-mono text-xs text-[var(--subtle)]">Mods & Plugins</span>
               </div>
-              <div className="flex items-center justify-between pb-1">
+              <div className="flex items-center justify-between border-b border-white/[0.05] pb-3">
                 <span className="font-medium text-white">{t("platform3Title")}</span>
                 <span className="font-mono text-xs text-[var(--subtle)]">Paper & Velocity</span>
+              </div>
+              <div className="flex items-center justify-between pb-1">
+                <span className="font-medium text-white">{t("platform4Title")}</span>
+                <span className="font-mono text-xs text-[var(--subtle)]">Mods & Plugins</span>
               </div>
             </div>
           </div>

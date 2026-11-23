@@ -3,7 +3,7 @@ use comet_core::{ProjectConfig, TargetConfig};
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::{Confirm, Input, MultiSelect, Select};
 
-use crate::ui;
+use crate::{git, ui};
 
 pub fn select_project<'a>(
     projects: &'a [ProjectConfig],
@@ -20,9 +20,20 @@ pub fn select_project<'a>(
         return Ok(&projects[0]);
     }
 
+    let detected_repo = git::detect_github_repo();
+    let default_idx = detected_repo
+        .as_deref()
+        .and_then(|repo| {
+            projects
+                .iter()
+                .position(|p| p.repo_full_name.eq_ignore_ascii_case(repo))
+        })
+        .unwrap_or(0);
+
     let items: Vec<String> = projects
         .iter()
-        .map(|p| {
+        .enumerate()
+        .map(|(idx, p)| {
             let active: Vec<String> = p
                 .targets
                 .iter()
@@ -34,14 +45,22 @@ pub fn select_project<'a>(
             } else {
                 active.join(", ")
             };
-            format!("{} ({}) · [{}]", p.display_name, p.repo_full_name, suffix)
+            let current_tag = if detected_repo.is_some() && idx == default_idx {
+                " (current)"
+            } else {
+                ""
+            };
+            format!(
+                "{} ({}){} · [{}]",
+                p.display_name, p.repo_full_name, current_tag, suffix
+            )
         })
         .collect();
 
     let idx = Select::with_theme(&ui::theme())
         .with_prompt("Select a repository")
         .items(&items)
-        .default(0)
+        .default(default_idx)
         .interact()?;
 
     Ok(&projects[idx])

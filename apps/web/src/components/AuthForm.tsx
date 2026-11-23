@@ -248,7 +248,7 @@ export function AuthForm({ mode, initialError }: AuthFormProps) {
                 {tApp("tagline")}
               </p>
               <p className="font-mono text-xs text-white/60">
-                GitHub Releases · Modrinth · Hangar
+                GitHub Releases · Modrinth · Hangar · CurseForge
               </p>
             </div>
           </div>

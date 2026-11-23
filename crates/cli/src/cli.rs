@@ -19,6 +19,8 @@ pub enum Command {
     Logout,
     /// Show current account and configured projects
     Status,
+    /// Check CLI configuration, authentication, and local repository
+    Doctor,
     /// Enable or disable publishing targets for a project
     Targets,
     /// Publish a GitHub Release to configured targets
