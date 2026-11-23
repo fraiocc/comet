@@ -10,6 +10,7 @@ use crate::models::{PublishRequest, PublishResult, TargetKind};
 use crate::providers::Publisher;
 
 const HANGAR_API_BASE: &str = "https://hangar.papermc.io/api/v1";
+const CLI_USER_AGENT: &str = concat!("comet-cli/", env!("CARGO_PKG_VERSION"));
 
 pub struct HangarPublisher {
     http: reqwest::Client,
@@ -32,7 +33,7 @@ impl HangarPublisher {
         let resp = self
             .http
             .post(format!("{HANGAR_API_BASE}/authenticate"))
-            .header(USER_AGENT, "comet-cli/0.1.0")
+            .header(USER_AGENT, CLI_USER_AGENT)
             .query(&[("apiKey", api_key)])
             .send()
             .await?;
@@ -183,7 +184,7 @@ impl Publisher for HangarPublisher {
         let resp = self
             .http
             .post(&endpoint)
-            .header(USER_AGENT, "comet-cli/0.1.0")
+            .header(USER_AGENT, CLI_USER_AGENT)
             .header(AUTHORIZATION, format!("HangarAuth {jwt}"))
             .multipart(form)
             .send()

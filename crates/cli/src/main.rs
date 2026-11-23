@@ -29,6 +29,10 @@ async fn main() -> Result<()> {
             ui::print_compact_header();
             commands::logout::run()
         }
+        Some(Command::Init) => {
+            ui::print_compact_header();
+            commands::init::run().await
+        }
         Some(Command::Status) => {
             ui::print_compact_header();
             commands::status::run().await

@@ -5,6 +5,9 @@ import { db } from "@/db";
 import { projects, targets, type TargetDependency } from "@/db/schema";
 import { getSessionUser } from "@/lib/auth";
 import { decryptSecret } from "@/lib/crypto";
+import { APP_VERSION } from "@/lib/version";
+
+const WEB_USER_AGENT = `comet-web/${APP_VERSION}`;
 
 interface ModrinthVersion {
   version_number: string;
@@ -71,7 +74,7 @@ export async function POST(req: NextRequest) {
 
   try {
     if (kind === "modrinth") {
-      const headers: Record<string, string> = { "User-Agent": "comet-web/0.1.0" };
+      const headers: Record<string, string> = { "User-Agent": WEB_USER_AGENT };
       if (resolvedToken) headers.Authorization = resolvedToken;
 
       const versionsResp = await fetch(
@@ -126,7 +129,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const headers: Record<string, string> = { "User-Agent": "comet-web/0.1.0" };
+    const headers: Record<string, string> = { "User-Agent": WEB_USER_AGENT };
     if (resolvedToken) {
       const authResp = await fetch(
         `https://hangar.papermc.io/api/v1/authenticate?apiKey=${encodeURIComponent(resolvedToken)}`,

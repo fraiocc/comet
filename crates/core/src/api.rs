@@ -12,6 +12,20 @@ struct RecordHistoryResponse {
     discord_sent: bool,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatedProject {
+    pub id: String,
+    pub repo_full_name: String,
+    pub display_name: String,
+    pub asset_pattern: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct CreateProjectResponse {
+    project: CreatedProject,
+}
+
 pub struct CometClient {
     http: reqwest::Client,
     base_url: String,
@@ -149,5 +163,40 @@ impl CometClient {
                 discord_sent: false,
             });
         Ok(payload.discord_sent)
+    }
+
+    pub async fn create_project(
+        &self,
+        repo_full_name: &str,
+        display_name: &str,
+        asset_pattern: &str,
+    ) -> Result<CreatedProject> {
+        let url = format!("{}/api/cli/projects", self.base_url);
+        let resp = self
+            .http
+            .post(&url)
+            .header(USER_AGENT, CLI_USER_AGENT)
+            .header(AUTHORIZATION, format!("Bearer {}", self.token))
+            .json(&serde_json::json!({
+                "repoFullName": repo_full_name,
+                "displayName": display_name,
+                "assetPattern": asset_pattern,
+            }))
+            .send()
+            .await?;
+
+        let status = resp.status();
+        if status.as_u16() == 401 {
+            return Err(CometError::Unauthenticated);
+        }
+        if !status.is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            return Err(CometError::Api {
+                status: status.as_u16(),
+                message: body,
+            });
+        }
+
+        Ok(resp.json::<CreateProjectResponse>().await?.project)
     }
 }

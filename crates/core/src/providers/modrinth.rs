@@ -8,6 +8,7 @@ use crate::models::{PublishRequest, PublishResult, TargetKind};
 use crate::providers::Publisher;
 
 const MODRINTH_API_BASE: &str = "https://api.modrinth.com/v2";
+const CLI_USER_AGENT: &str = concat!("comet-cli/", env!("CARGO_PKG_VERSION"));
 
 pub struct ModrinthPublisher {
     http: reqwest::Client,
@@ -111,7 +112,7 @@ impl Publisher for ModrinthPublisher {
         let resp = self
             .http
             .post(format!("{MODRINTH_API_BASE}/version"))
-            .header(USER_AGENT, "comet-cli/0.1.0")
+            .header(USER_AGENT, CLI_USER_AGENT)
             .header(AUTHORIZATION, &req.target.token)
             .multipart(form)
             .send()

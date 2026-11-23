@@ -58,13 +58,13 @@ impl GitHubClient {
             );
             self.http
                 .get(api_url)
-                .header(USER_AGENT, "comet-cli/0.1.0")
+                .header(USER_AGENT, concat!("comet-cli/", env!("CARGO_PKG_VERSION")))
                 .header(ACCEPT, "application/octet-stream")
                 .header(AUTHORIZATION, format!("Bearer {token}"))
         } else {
             self.http
                 .get(&asset.browser_download_url)
-                .header(USER_AGENT, "comet-cli/0.1.0")
+                .header(USER_AGENT, concat!("comet-cli/", env!("CARGO_PKG_VERSION")))
         };
 
         let resp = req.send().await?;
@@ -144,7 +144,7 @@ impl GitHubClient {
         let mut req = self
             .http
             .get(url)
-            .header(USER_AGENT, "comet-cli/0.1.0")
+            .header(USER_AGENT, concat!("comet-cli/", env!("CARGO_PKG_VERSION")))
             .header(ACCEPT, "application/vnd.github+json");
         if let Some(token) = &self.token {
             req = req.header(AUTHORIZATION, format!("Bearer {token}"));
@@ -156,7 +156,7 @@ impl GitHubClient {
         let mut req = self
             .http
             .get(url)
-            .header(USER_AGENT, "comet-cli/0.1.0")
+            .header(USER_AGENT, concat!("comet-cli/", env!("CARGO_PKG_VERSION")))
             .header(ACCEPT, "application/vnd.github+json");
         if let Some(token) = &self.token {
             req = req.header(AUTHORIZATION, format!("Bearer {token}"));

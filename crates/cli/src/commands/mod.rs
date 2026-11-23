@@ -1,4 +1,5 @@
 pub mod doctor;
+pub mod init;
 pub mod interactive;
 pub mod login;
 pub mod logout;

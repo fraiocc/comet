@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getSessionUser } from "@/lib/auth";
+import { APP_VERSION } from "@/lib/version";
+
+const WEB_USER_AGENT = `comet-web/${APP_VERSION}`;
 
 interface ModrinthUser {
   id: string;
@@ -68,7 +71,7 @@ export async function POST(req: NextRequest) {
     if (kind === "modrinth") {
       const headers = {
         Authorization: token,
-        "User-Agent": "comet-web/0.1.0",
+        "User-Agent": WEB_USER_AGENT,
       };
 
       const userResp = await fetch("https://api.modrinth.com/v2/user", {
@@ -185,7 +188,7 @@ export async function POST(req: NextRequest) {
       `https://hangar.papermc.io/api/v1/authenticate?apiKey=${encodeURIComponent(token)}`,
       {
         method: "POST",
-        headers: { "User-Agent": "comet-web/0.1.0" },
+        headers: { "User-Agent": WEB_USER_AGENT },
         cache: "no-store",
       },
     );
@@ -205,7 +208,7 @@ export async function POST(req: NextRequest) {
       {
         headers: {
           Authorization: `HangarAuth ${jwt}`,
-          "User-Agent": "comet-web/0.1.0",
+          "User-Agent": WEB_USER_AGENT,
         },
         cache: "no-store",
       },

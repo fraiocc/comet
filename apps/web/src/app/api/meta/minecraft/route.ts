@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 
+import { APP_VERSION } from "@/lib/version";
+
+const WEB_USER_AGENT = `comet-web/${APP_VERSION}`;
+
 interface ModrinthGameVersion {
   version: string;
   version_type: string;
@@ -61,11 +65,11 @@ export async function GET() {
   try {
     const [versionsResp, loadersResp] = await Promise.all([
       fetch("https://api.modrinth.com/v2/tag/game_version", {
-        headers: { "User-Agent": "comet-web/0.1.0" },
+        headers: { "User-Agent": WEB_USER_AGENT },
         next: { revalidate: 3600 },
       }),
       fetch("https://api.modrinth.com/v2/tag/loader", {
-        headers: { "User-Agent": "comet-web/0.1.0" },
+        headers: { "User-Agent": WEB_USER_AGENT },
         next: { revalidate: 3600 },
       }),
     ]);

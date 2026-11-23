@@ -2,7 +2,7 @@ use anyhow::{Result, bail};
 use comet_core::{CliConfig, CometClient};
 use dialoguer::{MultiSelect, Select};
 
-use crate::ui;
+use crate::{git, ui};
 
 pub async fn run() -> Result<()> {
     let config = CliConfig::load()?;
@@ -22,14 +22,29 @@ pub async fn run() -> Result<()> {
     let project_idx = if projects.len() == 1 {
         0
     } else {
+        let detected = git::detect_github_repo();
+        let default_idx = detected
+            .as_deref()
+            .and_then(|repo| {
+                projects
+                    .iter()
+                    .position(|p| p.repo_full_name.eq_ignore_ascii_case(repo))
+            })
+            .unwrap_or(0);
         let items: Vec<String> = projects
             .iter()
-            .map(|p| {
+            .enumerate()
+            .map(|(idx, p)| {
                 let active = p.targets.iter().filter(|t| t.enabled).count();
                 let total = p.targets.len();
+                let tag = if detected.is_some() && idx == default_idx {
+                    " (current)"
+                } else {
+                    ""
+                };
                 format!(
-                    "{} {} ({active}/{total} active)",
-                    p.display_name, p.repo_full_name
+                    "{} {}{} ({active}/{total} active)",
+                    p.display_name, p.repo_full_name, tag
                 )
             })
             .collect();
@@ -37,14 +52,14 @@ pub async fn run() -> Result<()> {
         Select::with_theme(&theme)
             .with_prompt("Select a project")
             .items(&items)
-            .default(0)
+            .default(default_idx)
             .interact()?
     };
 
     let project = &projects[project_idx];
     if project.targets.is_empty() {
         ui::print_warn(&format!(
-            "No targets configured for {}. Add Modrinth or Hangar on the web dashboard.",
+            "No targets configured for {}. Add Modrinth, Hangar, or CurseForge on the web dashboard.",
             project.repo_full_name
         ));
         return Ok(());
@@ -55,7 +70,7 @@ pub async fn run() -> Result<()> {
         .iter()
         .map(|t| {
             format!(
-                "{:<9} · {} · {}",
+                "{:<10} · {} · {}",
                 t.kind.to_string(),
                 t.external_project_id,
                 t.loaders.join(", ")

@@ -17,6 +17,8 @@ pub enum Command {
     Login(LoginArgs),
     /// Clear the saved CLI token
     Logout,
+    /// Register the current GitHub repository in Comet
+    Init,
     /// Show current account and configured projects
     Status,
     /// Check CLI configuration, authentication, and local repository

@@ -79,7 +79,7 @@ pub fn select_targets(
         .iter()
         .map(|t| {
             format!(
-                "{:<9} · {} · {}",
+                "{:<10} · {} · {}",
                 t.kind.to_string(),
                 t.external_project_id,
                 t.loaders.join(", ")
