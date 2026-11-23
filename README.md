@@ -1,13 +1,16 @@
 # Comet
 
-Open-source release publishing for Minecraft and developer projects. Configure your Modrinth and Hangar targets once on [comet.fraio.cc](https://comet.fraio.cc), then publish GitHub Releases from your terminal or GitHub Actions in a single step.
+Open-source release publisher built in Rust for Minecraft plugins, mods, and developer projects. Configure your **Modrinth**, **Hangar**, and **CurseForge** targets once on [comet.fraio.cc](https://comet.fraio.cc), then publish GitHub Releases or local `.jar` artifacts in parallel from your terminal or GitHub Actions.
 
 ## Features
 
-- **Interactive Rust CLI (`comet`)** — auto-detects your Git repository, lets you toggle targets, choose changelog sources (GitHub Release notes, full commit messages, custom text, or saved default), and preview with `--dry-run`.
+- **Fast Rust CLI (`comet`)** — interactive command shell with numbered quick access (`1`–`4`), short aliases (`comet p`, `comet s`, `comet t`, `comet i`), built-in auto-updater, and shell completions (`powershell`, `bash`, `zsh`, `fish`).
+- **Parallel Publishing & Retry Engine** — uploads to Modrinth, Hangar, and CurseForge concurrently with automatic exponential backoff on `429`/`5xx` errors, streaming download progress bars, and CI-ready `--json` output.
+- **Pure-Rust JAR Metadata Inspector & Local Publish** — inspects `plugin.yml`, `paper-plugin.yml`, `fabric.mod.json`, `quilt.mod.json`, `velocity-plugin.json`, `neoforge.mods.toml`, `mods.toml`, and `bungee.yml`, computes SHA-256 digests, warns on loader mismatches before upload, and supports direct local publishing via `--file`.
+- **Conventional Commits Changelog Generator** — generates categorized Markdown release notes directly from your local Git history (`comet changelog` / `comet publish --auto-changelog`).
+- **Pre-Flight Validation & Diagnostics** — live token, project, and asset-pattern checks (`comet validate`, `comet doctor`), GitHub Release browser (`comet releases`), and local publish history (`comet history`).
 - **GitHub Actions** — composite action (`fraiocc/comet@v1`) downloads the prebuilt static binary and publishes automatically on every release.
-- **Modrinth & Hangar** — personal and organization project discovery, plugin & mod loaders, Minecraft versions, release channels, and dependency sync (including Hangar `externalUrl` preservation).
-- **Security** — platform API tokens encrypted at rest with AES-256-GCM; personal CLI tokens stored as SHA-256 hashes; private GitHub Release asset downloads supported.
+- **Workspace Dashboard & Webhooks** — sidebar web dashboard on [comet.fraio.cc](https://comet.fraio.cc) with publish history, Discord webhook notifications, AES-256-GCM encrypted platform tokens, and SHA-256 hashed CLI tokens.
 
 ## Install CLI
 
@@ -35,18 +38,44 @@ curl -fsSL https://comet.fraio.cc/install.sh | sh
 cargo install --git https://github.com/fraiocc/comet comet-cli
 ```
 
-## Quick Start
+## CLI Commands
+
+| Command | Alias | Description |
+| --- | --- | --- |
+| `comet` | — | Open the interactive shell with quick access (`1`–`4`) |
+| `comet publish` | `p` | Publish a GitHub Release or local `--file` artifact in parallel |
+| `comet inspect <file.jar>` | — | Inspect JAR loaders, version, dependencies, and SHA-256 |
+| `comet changelog` | `cl` | Generate categorized Markdown notes from Git commits |
+| `comet validate` | `val` | Verify platform tokens, targets, and release asset matching |
+| `comet releases` | `rel` | List recent GitHub Releases and assets for a repository |
+| `comet history` | `hist` | Show recent local publish history (`~/.comet/history.json`) |
+| `comet targets` | `t` | Enable or disable targets for a project |
+| `comet init` | `i` | Register the current GitHub repository in Comet |
+| `comet status` | `s` | Show connected account and configured projects |
+| `comet doctor` | — | Run local configuration, auth, and connectivity checks |
+| `comet completions <shell>` | — | Generate shell completions (`powershell`, `bash`, `zsh`, `fish`) |
+| `comet login` / `logout` | `account` | Connect, switch, or clear your `~/.comet/config.toml` token |
+
+## Usage Examples
 
 ```sh
-comet login
+# Interactive shell
 comet
-```
 
-Or publish non-interactively:
+# Preview publish plan without uploading
+comet publish --dry-run
 
-```sh
-comet publish --repo owner/repo --dry-run
-comet publish --repo owner/repo --yes
+# Publish a local build directly with auto-generated Git changelog and JSON output
+comet publish --file build/libs/MyPlugin-1.5.0.jar --auto-changelog --yes --json
+
+# Inspect a compiled mod/plugin JAR
+comet inspect build/libs/MyPlugin-1.5.0.jar
+
+# Generate release notes since the last Git tag
+comet changelog --title v1.5.0 --output RELEASE_NOTES.md
+
+# Validate all targets and API tokens before releasing
+comet validate
 ```
 
 ## GitHub Actions
@@ -71,8 +100,8 @@ Optional inputs: `repo` (defaults to `${{ github.repository }}`), `tag` (default
 
 ## Repository Structure
 
-- `crates/core` — `comet-core` Rust library (GitHub Release resolution, Comet API client, Modrinth & Hangar publishers)
-- `crates/cli` — `comet` CLI binary (interactive TUI & headless CI mode)
+- `crates/core` — `comet-core` Rust library (GitHub client, retry engine, JAR inspector, Conventional Commits parser, local history store, Modrinth / Hangar / CurseForge publishers)
+- `crates/cli` — `comet` Rust CLI binary (interactive shell, parallel publish runner, diagnostics, shell completions, auto-updater)
 - `apps/web` — Next.js 16 + React 19 + Tailwind CSS v4 + Drizzle ORM (PostgreSQL) web dashboard
 - `action.yml` — Composite GitHub Action for automated publishing
 
